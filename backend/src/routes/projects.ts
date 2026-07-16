@@ -43,6 +43,7 @@ router.post(
       owner: req.user!._id,
       title: body.title,
       description: body.description,
+      category: body.category,
       fileName: req.file.originalname,
       fileHash,
       storagePath,
@@ -92,7 +93,11 @@ router.get(
   '/',
   optionalAuth,
   asyncHandler(async (req, res) => {
-    const { tag, q } = req.query as { tag?: string; q?: string };
+    const { tag, q, category } = req.query as {
+      tag?: string;
+      q?: string;
+      category?: string;
+    };
 
     const filter: Record<string, unknown> = {};
     const visibilityOr: Record<string, unknown>[] = [{ visibility: 'public' }];
@@ -103,6 +108,9 @@ router.get(
 
     if (tag) {
       filter.tags = tag;
+    }
+    if (category) {
+      filter.category = category;
     }
     if (q) {
       const regex = new RegExp(q, 'i');

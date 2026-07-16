@@ -3,6 +3,7 @@ import type {
   AuthResponse,
   LicenseRequest,
   Project,
+  ProjectCategory,
   Role,
   User,
 } from '../types';
@@ -109,6 +110,7 @@ export interface UploadProjectInput {
   file: File;
   title: string;
   description: string;
+  category: ProjectCategory;
   tags: string[];
   visibility: 'public' | 'private';
 }
@@ -116,6 +118,7 @@ export interface UploadProjectInput {
 export interface ProjectListParams {
   tag?: string;
   q?: string;
+  category?: ProjectCategory;
 }
 
 export const projectsApi = {
@@ -158,6 +161,7 @@ export const projectsApi = {
       form.append('file', input.file);
       form.append('title', input.title);
       form.append('description', input.description);
+      form.append('category', input.category);
       input.tags.forEach((tag) => form.append('tags[]', tag));
       form.append('visibility', input.visibility);
 

@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import CategoryBadge from './CategoryBadge';
 import type { Project, User } from '../types';
 
 function ownerName(owner: Project['owner']): string {
@@ -25,6 +26,9 @@ export default function ProjectCard({ project }: { project: Project }) {
       <p className="mt-1 line-clamp-2 text-sm text-ink-300">
         {project.description}
       </p>
+      <div className="mt-2">
+        <CategoryBadge category={project.category} />
+      </div>
       <div className="mt-3 flex flex-wrap gap-1.5">
         {project.tags.map((tag) => (
           <span

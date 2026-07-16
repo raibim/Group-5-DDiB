@@ -1,5 +1,8 @@
 import { Schema, model, Document, Types } from 'mongoose';
 
+export const PROJECT_CATEGORIES = ['final-year', 'hackathon', 'summer-school'] as const;
+export type ProjectCategory = (typeof PROJECT_CATEGORIES)[number];
+
 export interface IOwnershipProof {
   onChainId: number;
   txHash: string;
@@ -12,6 +15,7 @@ export interface IProject extends Document {
   owner: Types.ObjectId;
   title: string;
   description: string;
+  category: ProjectCategory;
   fileName: string;
   fileHash: string;
   storagePath: string;
@@ -35,6 +39,7 @@ const projectSchema = new Schema<IProject>({
   owner: { type: Schema.Types.ObjectId, ref: 'User', required: true },
   title: { type: String, required: true, trim: true },
   description: { type: String, required: true },
+  category: { type: String, enum: PROJECT_CATEGORIES, required: true },
   fileName: { type: String, required: true },
   fileHash: { type: String, required: true },
   storagePath: { type: String, required: true },

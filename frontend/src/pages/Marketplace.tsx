@@ -1,7 +1,14 @@
 import { useEffect, useMemo, useState } from 'react';
 import ProjectCard from '../components/ProjectCard';
 import { projectsApi, ApiError } from '../api/client';
-import type { Project } from '../types';
+import {
+  PROJECT_CATEGORIES,
+  PROJECT_CATEGORY_LABELS,
+  type Project,
+  type ProjectCategory,
+} from '../types';
+
+type CategoryFilter = ProjectCategory | 'all';
 
 export default function Marketplace() {
   const [projects, setProjects] = useState<Project[]>([]);
@@ -9,6 +16,7 @@ export default function Marketplace() {
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [tagFilter, setTagFilter] = useState<string>('all');
+  const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>('all');
 
   useEffect(() => {
     let cancelled = false;
@@ -45,9 +53,11 @@ export default function Marketplace() {
         p.title.toLowerCase().includes(query) ||
         p.description.toLowerCase().includes(query);
       const matchesTag = tagFilter === 'all' || p.tags.includes(tagFilter);
-      return matchesQuery && matchesTag;
+      const matchesCategory =
+        categoryFilter === 'all' || p.category === categoryFilter;
+      return matchesQuery && matchesTag && matchesCategory;
     });
-  }, [projects, search, tagFilter]);
+  }, [projects, search, tagFilter, categoryFilter]);
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-8">
@@ -59,6 +69,23 @@ export default function Marketplace() {
           Browse student inventions with on-chain proof of ownership,
           available for licensing.
         </p>
+      </div>
+
+      <div className="mb-4 flex flex-wrap gap-2">
+        {(['all', ...PROJECT_CATEGORIES] as CategoryFilter[]).map((c) => (
+          <button
+            key={c}
+            type="button"
+            onClick={() => setCategoryFilter(c)}
+            className={`rounded-full border px-3.5 py-1.5 text-xs font-semibold uppercase tracking-wide transition-colors ${
+              categoryFilter === c
+                ? 'border-transparent bg-gradient-to-r from-brand-500 to-accent-500 text-white shadow-glow'
+                : 'border-ink-600 bg-ink-800/60 text-ink-300 hover:border-brand-400 hover:text-brand-300'
+            }`}
+          >
+            {c === 'all' ? 'All Categories' : PROJECT_CATEGORY_LABELS[c]}
+          </button>
+        ))}
       </div>
 
       <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center">

@@ -67,6 +67,20 @@ when `chain:node` starts, e.g. account #2/#3/#4, so payouts land somewhere real 
 chain). Upload a project as the student, request a license as the company, then walk through
 accept → fund → release from each dashboard.
 
+### Demo data
+
+Projects are organized into three categories: Final Year Projects, Hackathon, and Summer
+School. To populate the marketplace with a realistic spread across all three (including
+InnovChain itself and a "Group 5" entry under Summer School, each genuinely registered
+on-chain), run, with the full stack up:
+
+```bash
+node backend/scripts/seed-demo-data.mjs
+```
+
+It registers a handful of demo student accounts and uploads ten projects — real files, real
+SHA-256 hashes, real `OwnershipRegistry` transactions — via the running API.
+
 ## Tests
 
 ```bash

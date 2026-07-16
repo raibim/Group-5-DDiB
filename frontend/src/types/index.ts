@@ -18,11 +18,26 @@ export interface OwnershipProof {
 
 export type Visibility = 'public' | 'private';
 
+export type ProjectCategory = 'final-year' | 'hackathon' | 'summer-school';
+
+export const PROJECT_CATEGORIES: ProjectCategory[] = [
+  'final-year',
+  'hackathon',
+  'summer-school',
+];
+
+export const PROJECT_CATEGORY_LABELS: Record<ProjectCategory, string> = {
+  'final-year': 'Final Year Projects',
+  hackathon: 'Hackathon',
+  'summer-school': 'Summer School',
+};
+
 export interface Project {
   _id: string;
   owner: string | User;
   title: string;
   description: string;
+  category: ProjectCategory;
   fileName: string;
   fileHash: string;
   storagePath: string;

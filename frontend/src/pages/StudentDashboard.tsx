@@ -2,7 +2,15 @@ import { useEffect, useState, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
 import { ApiError, licenseRequestsApi, projectsApi } from '../api/client';
 import StatusBadge from '../components/StatusBadge';
-import type { LicenseRequest, Project, User } from '../types';
+import CategoryBadge from '../components/CategoryBadge';
+import {
+  PROJECT_CATEGORIES,
+  PROJECT_CATEGORY_LABELS,
+  type LicenseRequest,
+  type Project,
+  type ProjectCategory,
+  type User,
+} from '../types';
 import { shortenAddress, shortenHash, weiToEth } from '../utils/format';
 
 function projectTitle(project: LicenseRequest['project']): string {
@@ -27,6 +35,7 @@ export default function StudentDashboard() {
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
+  const [category, setCategory] = useState<ProjectCategory>('final-year');
   const [tags, setTags] = useState('');
   const [visibility, setVisibility] = useState<'public' | 'private'>('public');
   const [file, setFile] = useState<File | null>(null);
@@ -77,6 +86,7 @@ export default function StudentDashboard() {
         file,
         title,
         description,
+        category,
         tags: tags
           .split(',')
           .map((t) => t.trim())
@@ -85,6 +95,7 @@ export default function StudentDashboard() {
       });
       setTitle('');
       setDescription('');
+      setCategory('final-year');
       setTags('');
       setVisibility('public');
       setFile(null);
@@ -193,6 +204,24 @@ export default function StudentDashboard() {
             </div>
 
             <div>
+              <label className="label" htmlFor="category">
+                Category
+              </label>
+              <select
+                id="category"
+                className="input"
+                value={category}
+                onChange={(e) => setCategory(e.target.value as ProjectCategory)}
+              >
+                {PROJECT_CATEGORIES.map((c) => (
+                  <option key={c} value={c}>
+                    {PROJECT_CATEGORY_LABELS[c]}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
               <label className="label" htmlFor="tags">
                 Tags (comma-separated)
               </label>
@@ -253,12 +282,15 @@ export default function StudentDashboard() {
           <ul className="mt-3 space-y-2">
             {projects.map((p) => (
               <li key={p._id} className="card">
-                <Link
-                  to={`/projects/${p._id}`}
-                  className="font-medium text-brand-300 hover:underline"
-                >
-                  {p.title}
-                </Link>
+                <div className="flex items-start justify-between gap-2">
+                  <Link
+                    to={`/projects/${p._id}`}
+                    className="font-medium text-brand-300 hover:underline"
+                  >
+                    {p.title}
+                  </Link>
+                  <CategoryBadge category={p.category} />
+                </div>
                 <p className="mt-1 text-xs text-ink-400">
                   {p.visibility} &middot; on-chain id{' '}
                   {p.ownershipProof.onChainId}

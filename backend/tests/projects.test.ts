@@ -101,6 +101,7 @@ describe('Project routes', () => {
       owner: student._id,
       title: 'My Project',
       description: 'A cool project',
+      category: 'final-year',
       fileName: 'project.txt',
       fileHash: 'deadbeef',
       storagePath: 'uploads/project.txt',
@@ -115,6 +116,7 @@ describe('Project routes', () => {
       .set('Authorization', `Bearer ${tokenFor(student)}`)
       .field('title', 'My Project')
       .field('description', 'A cool project')
+      .field('category', 'final-year')
       .field('visibility', 'public')
       .attach('file', Buffer.from('hello world'), 'project.txt');
 

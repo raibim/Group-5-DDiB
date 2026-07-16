@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx jest *)",
+      "Bash(grep -n \"multipart form: file\\\\|query: \\\\`tag\\\\`\" \"/c/Users/asus/Desktop/Resources/MPhil/DeepDive BC/Project/Group-5-DDiB/docs/API.md\")",
+      "Bash(powershell -NoProfile -Command \"Get-NetTCPConnection -LocalPort 4000,8545,27017,5173 -ErrorAction SilentlyContinue | Select-Object LocalPort,OwningProcess | Sort-Object LocalPort\")",
+      "Bash(docker exec *)",
+      "Bash(node backend/scripts/seed-demo-data.mjs)",
+      "Bash(curl -s http://localhost:4000/api/projects)",
+      "Bash(node -e \"const d=JSON.parse\\(require\\('fs'\\).readFileSync\\(0,'utf8'\\)\\); console.log\\(d.projects.length, 'total'\\); d.projects.forEach\\(p=>console.log\\('-', p.category, ':', p.title\\)\\)\")",
+      "Bash(curl -s \"http://localhost:4000/api/projects?category=summer-school\")",
+      "Bash(node -e \"const d=JSON.parse\\(require\\('fs'\\).readFileSync\\(0,'utf8'\\)\\); d.projects.forEach\\(p=>console.log\\('-', p.title\\)\\)\")",
+      "Bash(curl -s -o /dev/null -w \"marketplace: %{http_code}\\\\n\" http://localhost:5173/)",
+      "Bash(curl -s -o /dev/null -w \"index.css: %{http_code}\\\\n\" http://localhost:5173/src/index.css)",
+      "Bash(curl -s -o /dev/null -w \"App.tsx: %{http_code}\\\\n\" http://localhost:5173/src/pages/Marketplace.tsx)",
+      "Bash(curl -s http://localhost:5173/src/pages/Marketplace.tsx)",
+      "Bash(node -e \"let d='';process.stdin.on\\('data',c=>d+=c\\);process.stdin.on\\('end',\\(\\)=>{if\\(d.includes\\('__vite_ssr_import'\\)||d.includes\\('CategoryFilter'\\)\\){console.log\\('OK: category code present'\\)}else{console.log\\('MISSING category code'\\)}}\\)\")"
+    ]
+  }
+}

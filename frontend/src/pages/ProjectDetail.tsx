@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from 'react';
 import { useParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { ApiError, licenseRequestsApi, projectsApi } from '../api/client';
+import CategoryBadge from '../components/CategoryBadge';
 import type { Project, User } from '../types';
 
 function ownerName(owner: Project['owner']): string {
@@ -100,6 +101,10 @@ export default function ProjectDetail() {
         <p className="mt-1 text-sm text-ink-400">
           by <span className="font-medium">{ownerName(project.owner)}</span>
         </p>
+
+        <div className="mt-3">
+          <CategoryBadge category={project.category} />
+        </div>
 
         <p className="mt-4 whitespace-pre-wrap text-ink-200">
           {project.description}

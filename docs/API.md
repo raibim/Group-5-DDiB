@@ -36,6 +36,7 @@ _id
 owner: ObjectId -> User (role student)
 title: string
 description: string
+category: 'final-year' | 'hackathon' | 'summer-school'
 fileName: string
 fileHash: string          // sha256 hex of the uploaded file, bytes32-compatible
 storagePath: string       // local disk path for PoC ("would be IPFS CID in production")
@@ -96,9 +97,9 @@ Auth
 - `GET  /auth/me` (auth) → `{ user }`
 
 Projects
-- `POST /projects` (auth: student, multipart form: file + title + description + tags[] + visibility)
+- `POST /projects` (auth: student, multipart form: file + title + description + category + tags[] + visibility)
   → creates Project, computes SHA-256, calls blockchain service `registerOwnership`, returns Project incl. `ownershipProof.txHash`
-- `GET  /projects` (public, query: `tag`, `q`) → list of public projects (+ own private ones if authed)
+- `GET  /projects` (public, query: `tag`, `q`, `category`) → list of public projects (+ own private ones if authed)
 - `GET  /projects/:id` → project detail incl. ownership proof
 - `GET  /projects/mine` (auth: student) → own projects
 

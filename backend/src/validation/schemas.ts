@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { PROJECT_CATEGORIES } from '../models/Project';
 
 export const registerSchema = z.object({
   email: z.string().email(),
@@ -20,6 +21,7 @@ export const loginSchema = z.object({
 export const createProjectSchema = z.object({
   title: z.string().min(1),
   description: z.string().min(1),
+  category: z.enum(PROJECT_CATEGORIES),
   tags: z
     .union([z.array(z.string()), z.string()])
     .optional()
