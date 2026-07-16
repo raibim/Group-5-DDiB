@@ -28,8 +28,8 @@ export default function Login() {
   return (
     <div className="mx-auto mt-16 max-w-sm px-4">
       <div className="card">
-        <h1 className="text-xl font-bold text-slate-900">Log in</h1>
-        <p className="mt-1 text-sm text-slate-500">
+        <h1 className="text-xl font-bold text-ink-50">Log in</h1>
+        <p className="mt-1 text-sm text-ink-400">
           Welcome back to InnovChain.
         </p>
 
@@ -63,7 +63,7 @@ export default function Login() {
           </div>
 
           {error && (
-            <p className="rounded-md bg-rose-50 px-3 py-2 text-sm text-rose-700">
+            <p className="rounded-md bg-rose-500/10 px-3 py-2 text-sm text-rose-300">
               {error}
             </p>
           )}
@@ -77,9 +77,9 @@ export default function Login() {
           </button>
         </form>
 
-        <p className="mt-4 text-center text-sm text-slate-500">
+        <p className="mt-4 text-center text-sm text-ink-400">
           No account?{' '}
-          <Link to="/register" className="font-medium text-brand-600">
+          <Link to="/register" className="font-medium text-brand-400">
             Register
           </Link>
         </p>

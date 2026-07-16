@@ -70,7 +70,7 @@ export default function ProjectDetail() {
 
   if (loading) {
     return (
-      <div className="mx-auto max-w-3xl px-4 py-12 text-sm text-slate-500">
+      <div className="mx-auto max-w-3xl px-4 py-12 text-sm text-ink-400">
         Loading project...
       </div>
     );
@@ -79,7 +79,7 @@ export default function ProjectDetail() {
   if (error || !project) {
     return (
       <div className="mx-auto max-w-3xl px-4 py-12">
-        <p className="rounded-md bg-rose-50 px-3 py-2 text-sm text-rose-700">
+        <p className="rounded-md bg-rose-500/10 px-3 py-2 text-sm text-rose-300">
           {error ?? 'Project not found'}
         </p>
       </div>
@@ -90,18 +90,18 @@ export default function ProjectDetail() {
     <div className="mx-auto max-w-3xl px-4 py-8">
       <div className="card">
         <div className="flex items-start justify-between gap-2">
-          <h1 className="text-2xl font-bold text-slate-900">{project.title}</h1>
+          <h1 className="text-2xl font-bold text-ink-50">{project.title}</h1>
           {project.visibility === 'private' && (
-            <span className="shrink-0 rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-500">
+            <span className="shrink-0 rounded-full bg-ink-800 px-2 py-0.5 text-xs font-medium text-ink-400">
               Private
             </span>
           )}
         </div>
-        <p className="mt-1 text-sm text-slate-500">
+        <p className="mt-1 text-sm text-ink-400">
           by <span className="font-medium">{ownerName(project.owner)}</span>
         </p>
 
-        <p className="mt-4 whitespace-pre-wrap text-slate-700">
+        <p className="mt-4 whitespace-pre-wrap text-ink-200">
           {project.description}
         </p>
 
@@ -109,46 +109,46 @@ export default function ProjectDetail() {
           {project.tags.map((tag) => (
             <span
               key={tag}
-              className="rounded-full bg-brand-50 px-2 py-0.5 text-xs font-medium text-brand-700"
+              className="rounded-full bg-brand-500/15 px-2 py-0.5 text-xs font-medium text-brand-300"
             >
               {tag}
             </span>
           ))}
         </div>
 
-        <p className="mt-4 text-sm text-slate-500">
-          File: <span className="font-medium text-slate-700">{project.fileName}</span>
+        <p className="mt-4 text-sm text-ink-400">
+          File: <span className="font-medium text-ink-200">{project.fileName}</span>
         </p>
       </div>
 
       <div className="card mt-6">
-        <h2 className="text-lg font-semibold text-slate-900">
+        <h2 className="text-lg font-semibold text-ink-50">
           On-chain Ownership Proof
         </h2>
-        <p className="mt-1 text-sm text-slate-500">
+        <p className="mt-1 text-sm text-ink-400">
           Registered via the <code>OwnershipRegistry</code> contract. No local
           block explorer is available in this PoC, so the raw values are
           shown below.
         </p>
-        <dl className="mt-4 space-y-2 rounded-md bg-slate-900 p-4 font-mono text-xs text-slate-100">
+        <dl className="mt-4 space-y-2 rounded-xl border border-lime-500/20 bg-black/40 p-4 font-mono text-xs text-lime-300 shadow-[inset_0_0_20px_rgba(163,230,53,0.05)]">
           <div className="flex flex-col gap-0.5 sm:flex-row sm:gap-2">
-            <dt className="w-40 shrink-0 text-slate-400">On-chain ID</dt>
+            <dt className="w-40 shrink-0 text-ink-500">On-chain ID</dt>
             <dd className="break-all">{project.ownershipProof.onChainId}</dd>
           </div>
           <div className="flex flex-col gap-0.5 sm:flex-row sm:gap-2">
-            <dt className="w-40 shrink-0 text-slate-400">File hash (SHA-256)</dt>
+            <dt className="w-40 shrink-0 text-ink-500">File hash (SHA-256)</dt>
             <dd className="break-all">{project.fileHash}</dd>
           </div>
           <div className="flex flex-col gap-0.5 sm:flex-row sm:gap-2">
-            <dt className="w-40 shrink-0 text-slate-400">Tx hash</dt>
+            <dt className="w-40 shrink-0 text-ink-500">Tx hash</dt>
             <dd className="break-all">{project.ownershipProof.txHash}</dd>
           </div>
           <div className="flex flex-col gap-0.5 sm:flex-row sm:gap-2">
-            <dt className="w-40 shrink-0 text-slate-400">Block number</dt>
+            <dt className="w-40 shrink-0 text-ink-500">Block number</dt>
             <dd className="break-all">{project.ownershipProof.blockNumber}</dd>
           </div>
           <div className="flex flex-col gap-0.5 sm:flex-row sm:gap-2">
-            <dt className="w-40 shrink-0 text-slate-400">Registered at</dt>
+            <dt className="w-40 shrink-0 text-ink-500">Registered at</dt>
             <dd className="break-all">
               {new Date(project.ownershipProof.registeredAt).toLocaleString()}
             </dd>
@@ -158,10 +158,10 @@ export default function ProjectDetail() {
 
       {user?.role === 'company' && (
         <div className="card mt-6">
-          <h2 className="text-lg font-semibold text-slate-900">
+          <h2 className="text-lg font-semibold text-ink-50">
             Request a License
           </h2>
-          <p className="mt-1 text-sm text-slate-500">
+          <p className="mt-1 text-sm text-ink-400">
             Submit terms to the student owner. If accepted, you'll be able to
             fund and release payment on-chain from your Company Dashboard.
           </p>
@@ -197,23 +197,23 @@ export default function ProjectDetail() {
               />
             </div>
 
-            <label className="flex items-center gap-2 text-sm text-slate-700">
+            <label className="flex items-center gap-2 text-sm text-ink-200">
               <input
                 type="checkbox"
                 checked={commercialUse}
                 onChange={(e) => setCommercialUse(e.target.checked)}
-                className="h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500"
+                className="h-4 w-4 rounded border-ink-600 text-brand-400 focus:ring-brand-500"
               />
               Commercial use
             </label>
 
             {requestError && (
-              <p className="rounded-md bg-rose-50 px-3 py-2 text-sm text-rose-700">
+              <p className="rounded-md bg-rose-500/10 px-3 py-2 text-sm text-rose-300">
                 {requestError}
               </p>
             )}
             {requestSuccess && (
-              <p className="rounded-md bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
+              <p className="rounded-md bg-emerald-500/10 px-3 py-2 text-sm text-emerald-300">
                 License request submitted. Track its status from your Company
                 Dashboard.
               </p>

@@ -52,10 +52,10 @@ export default function Marketplace() {
   return (
     <div className="mx-auto max-w-6xl px-4 py-8">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-slate-900">
+        <h1 className="text-2xl font-bold text-ink-50">
           Project Marketplace
         </h1>
-        <p className="mt-1 text-sm text-slate-500">
+        <p className="mt-1 text-sm text-ink-400">
           Browse student inventions with on-chain proof of ownership,
           available for licensing.
         </p>
@@ -83,15 +83,15 @@ export default function Marketplace() {
         </select>
       </div>
 
-      {loading && <p className="text-sm text-slate-500">Loading projects...</p>}
+      {loading && <p className="text-sm text-ink-400">Loading projects...</p>}
       {error && (
-        <p className="rounded-md bg-rose-50 px-3 py-2 text-sm text-rose-700">
+        <p className="rounded-md bg-rose-500/10 px-3 py-2 text-sm text-rose-300">
           {error}
         </p>
       )}
 
       {!loading && !error && filtered.length === 0 && (
-        <p className="rounded-md border border-dashed border-slate-300 p-8 text-center text-sm text-slate-500">
+        <p className="rounded-md border border-dashed border-ink-600 p-8 text-center text-sm text-ink-400">
           No projects match your search.
         </p>
       )}

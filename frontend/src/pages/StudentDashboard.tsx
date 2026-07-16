@@ -140,14 +140,14 @@ export default function StudentDashboard() {
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-8">
-      <h1 className="text-2xl font-bold text-slate-900">Student Dashboard</h1>
-      <p className="mt-1 text-sm text-slate-500">
+      <h1 className="text-2xl font-bold text-ink-50">Student Dashboard</h1>
+      <p className="mt-1 text-sm text-ink-400">
         Manage your projects and incoming license requests.
       </p>
 
       <div className="mt-8 grid grid-cols-1 gap-8 lg:grid-cols-2">
         <section>
-          <h2 className="text-lg font-semibold text-slate-900">
+          <h2 className="text-lg font-semibold text-ink-50">
             Upload a project
           </h2>
           <form className="card mt-3 space-y-4" onSubmit={handleUpload}>
@@ -159,7 +159,7 @@ export default function StudentDashboard() {
                 id="file"
                 type="file"
                 required
-                className="block w-full text-sm text-slate-600 file:mr-3 file:rounded-md file:border-0 file:bg-brand-50 file:px-3 file:py-2 file:text-sm file:font-medium file:text-brand-700 hover:file:bg-brand-100"
+                className="block w-full text-sm text-ink-300 file:mr-3 file:rounded-md file:border-0 file:bg-brand-500/150/15 file:px-3 file:py-2 file:text-sm file:font-medium file:text-brand-300 hover:file:bg-brand-500/150/25"
                 onChange={(e) => setFile(e.target.files?.[0] ?? null)}
               />
             </div>
@@ -224,7 +224,7 @@ export default function StudentDashboard() {
             </div>
 
             {uploadError && (
-              <p className="rounded-md bg-rose-50 px-3 py-2 text-sm text-rose-700">
+              <p className="rounded-md bg-rose-500/10 px-3 py-2 text-sm text-rose-300">
                 {uploadError}
               </p>
             )}
@@ -234,19 +234,19 @@ export default function StudentDashboard() {
             </button>
           </form>
 
-          <h2 className="mt-8 text-lg font-semibold text-slate-900">
+          <h2 className="mt-8 text-lg font-semibold text-ink-50">
             My Projects
           </h2>
           {projectsLoading && (
-            <p className="mt-2 text-sm text-slate-500">Loading...</p>
+            <p className="mt-2 text-sm text-ink-400">Loading...</p>
           )}
           {projectsError && (
-            <p className="mt-2 rounded-md bg-rose-50 px-3 py-2 text-sm text-rose-700">
+            <p className="mt-2 rounded-md bg-rose-500/10 px-3 py-2 text-sm text-rose-300">
               {projectsError}
             </p>
           )}
           {!projectsLoading && projects.length === 0 && (
-            <p className="mt-2 text-sm text-slate-500">
+            <p className="mt-2 text-sm text-ink-400">
               You haven't uploaded any projects yet.
             </p>
           )}
@@ -255,11 +255,11 @@ export default function StudentDashboard() {
               <li key={p._id} className="card">
                 <Link
                   to={`/projects/${p._id}`}
-                  className="font-medium text-brand-700 hover:underline"
+                  className="font-medium text-brand-300 hover:underline"
                 >
                   {p.title}
                 </Link>
-                <p className="mt-1 text-xs text-slate-500">
+                <p className="mt-1 text-xs text-ink-400">
                   {p.visibility} &middot; on-chain id{' '}
                   {p.ownershipProof.onChainId}
                 </p>
@@ -269,19 +269,19 @@ export default function StudentDashboard() {
         </section>
 
         <section>
-          <h2 className="text-lg font-semibold text-slate-900">
+          <h2 className="text-lg font-semibold text-ink-50">
             Incoming License Requests
           </h2>
           {requestsLoading && (
-            <p className="mt-2 text-sm text-slate-500">Loading...</p>
+            <p className="mt-2 text-sm text-ink-400">Loading...</p>
           )}
           {requestsError && (
-            <p className="mt-2 rounded-md bg-rose-50 px-3 py-2 text-sm text-rose-700">
+            <p className="mt-2 rounded-md bg-rose-500/10 px-3 py-2 text-sm text-rose-300">
               {requestsError}
             </p>
           )}
           {!requestsLoading && requests.length === 0 && (
-            <p className="mt-2 text-sm text-slate-500">
+            <p className="mt-2 text-sm text-ink-400">
               No license requests yet.
             </p>
           )}
@@ -291,22 +291,22 @@ export default function StudentDashboard() {
               <li key={r._id} className="card">
                 <div className="flex items-start justify-between gap-2">
                   <div>
-                    <p className="font-medium text-slate-900">
+                    <p className="font-medium text-ink-50">
                       {projectTitle(r.project)}
                     </p>
-                    <p className="text-xs text-slate-500">
+                    <p className="text-xs text-ink-400">
                       from {companyName(r.company)}
                     </p>
                   </div>
                   <StatusBadge status={r.status} />
                 </div>
 
-                <dl className="mt-3 grid grid-cols-2 gap-x-2 gap-y-1 text-xs text-slate-600">
-                  <dt className="text-slate-400">Duration</dt>
+                <dl className="mt-3 grid grid-cols-2 gap-x-2 gap-y-1 text-xs text-ink-300">
+                  <dt className="text-ink-500">Duration</dt>
                   <dd>{r.durationMonths} months</dd>
-                  <dt className="text-slate-400">Commercial use</dt>
+                  <dt className="text-ink-500">Commercial use</dt>
                   <dd>{r.commercialUse ? 'Yes' : 'No'}</dd>
-                  <dt className="text-slate-400">Price</dt>
+                  <dt className="text-ink-500">Price</dt>
                   <dd>{weiToEth(r.priceWei)} ETH</dd>
                 </dl>
 
@@ -330,7 +330,7 @@ export default function StudentDashboard() {
                 )}
 
                 {r.contract && (
-                  <div className="mt-3 rounded-md bg-slate-50 p-3 font-mono text-[11px] text-slate-600">
+                  <div className="mt-3 rounded-md bg-ink-800/70 border border-ink-700 p-3 font-mono text-[11px] text-ink-300">
                     <p>Escrow contract: {shortenAddress(r.contract.address)}</p>
                     <p>Deploy tx: {shortenHash(r.contract.deployTxHash)}</p>
                   </div>
@@ -349,12 +349,12 @@ export default function StudentDashboard() {
                 )}
 
                 {r.release && (
-                  <div className="mt-3 rounded-md bg-emerald-50 p-3 text-xs text-emerald-800">
+                  <div className="mt-3 rounded-md bg-lime-500/10 p-3 text-xs text-lime-300">
                     <p className="font-semibold">Royalty split (10% / 5% / 85%)</p>
                     <p>Student: {weiToEth(r.release.studentAmountWei)} ETH</p>
                     <p>University: {weiToEth(r.release.universityAmountWei)} ETH</p>
                     <p>Company: {weiToEth(r.release.companyAmountWei)} ETH</p>
-                    <p className="mt-1 font-mono text-[11px] text-emerald-700">
+                    <p className="mt-1 font-mono text-[11px] text-lime-300">
                       tx: {shortenHash(r.release.txHash)}
                     </p>
                   </div>

@@ -41,8 +41,8 @@ export default function Register() {
   return (
     <div className="mx-auto mt-16 max-w-sm px-4">
       <div className="card">
-        <h1 className="text-xl font-bold text-slate-900">Create an account</h1>
-        <p className="mt-1 text-sm text-slate-500">
+        <h1 className="text-xl font-bold text-ink-50">Create an account</h1>
+        <p className="mt-1 text-sm text-ink-400">
           Join InnovChain as a student inventor or a licensing company.
         </p>
 
@@ -118,7 +118,7 @@ export default function Register() {
               value={walletAddress}
               onChange={(e) => setWalletAddress(e.target.value)}
             />
-            <p className="mt-1 text-xs text-slate-400">
+            <p className="mt-1 text-xs text-ink-500">
               For this PoC, paste any EVM address (e.g. a Hardhat dev
               account). A real deployment would connect via MetaMask or
               WalletConnect instead of a text field.
@@ -126,7 +126,7 @@ export default function Register() {
           </div>
 
           {error && (
-            <p className="rounded-md bg-rose-50 px-3 py-2 text-sm text-rose-700">
+            <p className="rounded-md bg-rose-500/10 px-3 py-2 text-sm text-rose-300">
               {error}
             </p>
           )}
@@ -140,9 +140,9 @@ export default function Register() {
           </button>
         </form>
 
-        <p className="mt-4 text-center text-sm text-slate-500">
+        <p className="mt-4 text-center text-sm text-ink-400">
           Already have an account?{' '}
-          <Link to="/login" className="font-medium text-brand-600">
+          <Link to="/login" className="font-medium text-brand-400">
             Log in
           </Link>
         </p>

@@ -14,7 +14,7 @@ export default function ProtectedRoute({
 
   if (loading) {
     return (
-      <div className="flex h-64 items-center justify-center text-sm text-slate-500">
+      <div className="flex h-64 items-center justify-center text-sm text-ink-400">
         Loading...
       </div>
     );
