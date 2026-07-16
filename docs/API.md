@@ -81,6 +81,15 @@ createdAt
 
 ## REST endpoints (backend, prefix `/api`)
 
+Every JSON response body wraps its payload in a named key matching the resource, not a bare
+value: list/detail endpoints return `{ projects: Project[] }` / `{ project: Project }` /
+`{ licenseRequests: LicenseRequest[] }` / `{ licenseRequest: LicenseRequest }`; auth returns
+`{ token, user }` or `{ user }`; errors return `{ error: string }`. (This was the one place
+the backend and frontend implementations, built independently against this doc, disagreed —
+the frontend originally expected bare payloads and crashed on mount because `Project[]`
+methods were called on a `{ projects: [...] }` object. Fixed in `frontend/src/api/client.ts`
+by unwrapping the named key; noted here so it doesn't regress.)
+
 Auth
 - `POST /auth/register` `{ email, password, role, name, walletAddress }` → `{ token, user }`
 - `POST /auth/login` `{ email, password }` → `{ token, user }`

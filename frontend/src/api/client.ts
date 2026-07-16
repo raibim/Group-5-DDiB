@@ -121,8 +121,10 @@ export interface ProjectListParams {
 export const projectsApi = {
   async list(params: ProjectListParams = {}): Promise<Project[]> {
     try {
-      const { data } = await http.get<Project[]>('/projects', { params });
-      return data;
+      const { data } = await http.get<{ projects: Project[] }>('/projects', {
+        params,
+      });
+      return data.projects;
     } catch (err) {
       throw unwrapError(err);
     }
@@ -130,8 +132,10 @@ export const projectsApi = {
 
   async getById(id: string): Promise<Project> {
     try {
-      const { data } = await http.get<Project>(`/projects/${id}`);
-      return data;
+      const { data } = await http.get<{ project: Project }>(
+        `/projects/${id}`,
+      );
+      return data.project;
     } catch (err) {
       throw unwrapError(err);
     }
@@ -139,8 +143,10 @@ export const projectsApi = {
 
   async mine(): Promise<Project[]> {
     try {
-      const { data } = await http.get<Project[]>('/projects/mine');
-      return data;
+      const { data } = await http.get<{ projects: Project[] }>(
+        '/projects/mine',
+      );
+      return data.projects;
     } catch (err) {
       throw unwrapError(err);
     }
@@ -155,10 +161,12 @@ export const projectsApi = {
       input.tags.forEach((tag) => form.append('tags[]', tag));
       form.append('visibility', input.visibility);
 
-      const { data } = await http.post<Project>('/projects', form, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
-      return data;
+      const { data } = await http.post<{ project: Project }>(
+        '/projects',
+        form,
+        { headers: { 'Content-Type': 'multipart/form-data' } },
+      );
+      return data.project;
     } catch (err) {
       throw unwrapError(err);
     }
@@ -179,11 +187,11 @@ export const licenseRequestsApi = {
     input: CreateLicenseRequestInput,
   ): Promise<LicenseRequest> {
     try {
-      const { data } = await http.post<LicenseRequest>(
+      const { data } = await http.post<{ licenseRequest: LicenseRequest }>(
         `/projects/${projectId}/license-requests`,
         input,
       );
-      return data;
+      return data.licenseRequest;
     } catch (err) {
       throw unwrapError(err);
     }
@@ -191,10 +199,10 @@ export const licenseRequestsApi = {
 
   async mine(): Promise<LicenseRequest[]> {
     try {
-      const { data } = await http.get<LicenseRequest[]>(
+      const { data } = await http.get<{ licenseRequests: LicenseRequest[] }>(
         '/license-requests/mine',
       );
-      return data;
+      return data.licenseRequests;
     } catch (err) {
       throw unwrapError(err);
     }
@@ -202,10 +210,10 @@ export const licenseRequestsApi = {
 
   async getById(id: string): Promise<LicenseRequest> {
     try {
-      const { data } = await http.get<LicenseRequest>(
+      const { data } = await http.get<{ licenseRequest: LicenseRequest }>(
         `/license-requests/${id}`,
       );
-      return data;
+      return data.licenseRequest;
     } catch (err) {
       throw unwrapError(err);
     }
@@ -213,10 +221,10 @@ export const licenseRequestsApi = {
 
   async accept(id: string): Promise<LicenseRequest> {
     try {
-      const { data } = await http.post<LicenseRequest>(
+      const { data } = await http.post<{ licenseRequest: LicenseRequest }>(
         `/license-requests/${id}/accept`,
       );
-      return data;
+      return data.licenseRequest;
     } catch (err) {
       throw unwrapError(err);
     }
@@ -224,10 +232,10 @@ export const licenseRequestsApi = {
 
   async reject(id: string): Promise<LicenseRequest> {
     try {
-      const { data } = await http.post<LicenseRequest>(
+      const { data } = await http.post<{ licenseRequest: LicenseRequest }>(
         `/license-requests/${id}/reject`,
       );
-      return data;
+      return data.licenseRequest;
     } catch (err) {
       throw unwrapError(err);
     }
@@ -235,10 +243,10 @@ export const licenseRequestsApi = {
 
   async fund(id: string): Promise<LicenseRequest> {
     try {
-      const { data } = await http.post<LicenseRequest>(
+      const { data } = await http.post<{ licenseRequest: LicenseRequest }>(
         `/license-requests/${id}/fund`,
       );
-      return data;
+      return data.licenseRequest;
     } catch (err) {
       throw unwrapError(err);
     }
@@ -246,10 +254,10 @@ export const licenseRequestsApi = {
 
   async release(id: string): Promise<LicenseRequest> {
     try {
-      const { data } = await http.post<LicenseRequest>(
+      const { data } = await http.post<{ licenseRequest: LicenseRequest }>(
         `/license-requests/${id}/release`,
       );
-      return data;
+      return data.licenseRequest;
     } catch (err) {
       throw unwrapError(err);
     }
