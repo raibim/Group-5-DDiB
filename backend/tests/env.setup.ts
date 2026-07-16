@@ -1,0 +1,9 @@
+process.env.NODE_ENV = 'test';
+process.env.JWT_SECRET = 'test-secret';
+process.env.MONGODB_URI = 'mongodb://127.0.0.1:27017/innovchain-test';
+process.env.CORS_ORIGIN = 'http://localhost:5173';
+process.env.CHAIN_MODE = 'local';
+process.env.RPC_URL = 'http://127.0.0.1:8545';
+process.env.OWNERSHIP_REGISTRY_ADDRESS = '0x5FbDB2315678afecb367f032d93F642f64180aa';
+process.env.UNIVERSITY_WALLET_ADDRESS = '0x70997970C51812dc3A010C7d01b50e0d17dc79C8';
+process.env.UPLOAD_DIR = 'uploads-test';

@@ -1,0 +1,19 @@
+{
+  "name": "innovchain-contracts",
+  "version": "0.1.0",
+  "description": "Solidity smart contracts for InnovChain: on-chain ownership registry + licensing/royalty escrow",
+  "private": true,
+  "scripts": {
+    "compile": "hardhat compile",
+    "test": "hardhat test",
+    "node": "hardhat node",
+    "deploy:local": "hardhat run scripts/deploy.ts --network localhost"
+  },
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^5.0.0",
+    "dotenv": "^16.6.1",
+    "hardhat": "^2.22.5",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.4.5"
+  }
+}

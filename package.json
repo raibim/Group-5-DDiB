@@ -1,0 +1,16 @@
+{
+  "name": "innovchain",
+  "version": "0.1.0",
+  "private": true,
+  "description": "InnovChain — AI-powered blockchain innovation marketplace (DDiB '26 S4 final project, core PoC slice on Ethereum)",
+  "workspaces": ["contracts", "backend", "frontend"],
+  "scripts": {
+    "install:all": "npm install --prefix contracts && npm install --prefix backend && npm install --prefix frontend",
+    "chain:node": "npm run node --prefix contracts",
+    "chain:deploy": "npm run deploy:local --prefix contracts",
+    "backend:dev": "npm run dev --prefix backend",
+    "frontend:dev": "npm run dev --prefix frontend",
+    "contracts:test": "npm test --prefix contracts",
+    "backend:test": "npm test --prefix backend"
+  }
+}
