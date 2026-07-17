@@ -380,12 +380,21 @@ export default function StudentDashboard() {
                   </div>
                 )}
 
-                {r.release && (
+                {r.release && r.contract && (
                   <div className="mt-3 rounded-md bg-lime-500/10 p-3 text-xs text-lime-300">
-                    <p className="font-semibold">Royalty split (10% / 5% / 85%)</p>
+                    <p className="font-semibold">
+                      Royalty released ({r.contract.studentBps / 100}% student /{' '}
+                      {r.contract.universityBps / 100}% university)
+                    </p>
                     <p>Student: {weiToEth(r.release.studentAmountWei)} ETH</p>
                     <p>University: {weiToEth(r.release.universityAmountWei)} ETH</p>
-                    <p>Company: {weiToEth(r.release.companyAmountWei)} ETH</p>
+                    <p className="mt-1 text-lime-400">
+                      Company retains the remaining {r.contract.companyBps / 100}% (
+                      {weiToEth(
+                        (BigInt(r.priceWei) - BigInt(r.contract.royaltyWei)).toString(),
+                      )}{' '}
+                      ETH) — it was never escrowed.
+                    </p>
                     <p className="mt-1 font-mono text-[11px] text-lime-300">
                       tx: {shortenHash(r.release.txHash)}
                     </p>

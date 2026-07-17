@@ -14,7 +14,8 @@
       "Bash(curl -s -o /dev/null -w \"index.css: %{http_code}\\\\n\" http://localhost:5173/src/index.css)",
       "Bash(curl -s -o /dev/null -w \"App.tsx: %{http_code}\\\\n\" http://localhost:5173/src/pages/Marketplace.tsx)",
       "Bash(curl -s http://localhost:5173/src/pages/Marketplace.tsx)",
-      "Bash(node -e \"let d='';process.stdin.on\\('data',c=>d+=c\\);process.stdin.on\\('end',\\(\\)=>{if\\(d.includes\\('__vite_ssr_import'\\)||d.includes\\('CategoryFilter'\\)\\){console.log\\('OK: category code present'\\)}else{console.log\\('MISSING category code'\\)}}\\)\")"
+      "Bash(node -e \"let d='';process.stdin.on\\('data',c=>d+=c\\);process.stdin.on\\('end',\\(\\)=>{if\\(d.includes\\('__vite_ssr_import'\\)||d.includes\\('CategoryFilter'\\)\\){console.log\\('OK: category code present'\\)}else{console.log\\('MISSING category code'\\)}}\\)\")",
+      "Bash(npx hardhat *)"
     ]
   }
 }

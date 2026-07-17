@@ -104,7 +104,7 @@ export class TestnetChainService implements BlockchainService {
       input.companyAddress,
       input.studentBps,
       input.universityBps,
-      BigInt(input.priceWei),
+      BigInt(input.royaltyWei),
     );
     const receipt = await contract.deploymentTransaction()?.wait();
     if (!receipt) throw new Error('LicensingRoyalty deployment did not produce a receipt');
@@ -125,7 +125,6 @@ export class TestnetChainService implements BlockchainService {
 
     let studentAmountWei = '0';
     let universityAmountWei = '0';
-    let companyAmountWei = '0';
     for (const log of receipt.logs as Log[]) {
       if (log.address.toLowerCase() !== input.contractAddress.toLowerCase()) continue;
       try {
@@ -133,13 +132,12 @@ export class TestnetChainService implements BlockchainService {
         if (parsed && parsed.name === 'Released') {
           studentAmountWei = parsed.args.studentAmount.toString();
           universityAmountWei = parsed.args.universityAmount.toString();
-          companyAmountWei = parsed.args.companyAmount.toString();
           break;
         }
       } catch {
         // ignore
       }
     }
-    return { txHash: receipt.hash, studentAmountWei, universityAmountWei, companyAmountWei };
+    return { txHash: receipt.hash, studentAmountWei, universityAmountWei };
   }
 }

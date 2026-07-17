@@ -61,7 +61,8 @@ export interface LicenseContract {
   companyAddress: string;
   studentBps: number;
   universityBps: number;
-  companyBps: number;
+  companyBps: number; // informational only; the company's share is never escrowed or paid out
+  royaltyWei: string; // the actual amount escrowed and funded (student+university share only)
   deployTxHash: string;
 }
 
@@ -74,7 +75,6 @@ export interface LicenseRelease {
   txHash: string;
   studentAmountWei: string;
   universityAmountWei: string;
-  companyAmountWei: string;
 }
 
 export interface LicenseRequest {

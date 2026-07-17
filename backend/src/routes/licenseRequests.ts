@@ -105,6 +105,12 @@ router.post(
       throw new HttpError(404, 'Requesting company not found');
     }
 
+    // Only the student+university royalty share is ever escrowed on-chain - the company's
+    // remaining share (companyBps, informational) never moves through the contract. See
+    // LicensingRoyalty.sol's contract-level comment for the full rationale.
+    const royaltyBps = STUDENT_BPS + UNIVERSITY_BPS;
+    const royaltyWei = ((BigInt(licenseRequest.priceWei) * BigInt(royaltyBps)) / 10000n).toString();
+
     const chain = getBlockchainService();
     const deployed = await chain.deployLicensingContract({
       studentAddress: req.user!.walletAddress,
@@ -112,7 +118,7 @@ router.post(
       companyAddress: companyUser.walletAddress,
       studentBps: STUDENT_BPS,
       universityBps: UNIVERSITY_BPS,
-      priceWei: licenseRequest.priceWei,
+      royaltyWei,
     });
 
     licenseRequest.contract = {
@@ -123,6 +129,7 @@ router.post(
       studentBps: STUDENT_BPS,
       universityBps: UNIVERSITY_BPS,
       companyBps: 10000 - STUDENT_BPS - UNIVERSITY_BPS,
+      royaltyWei,
       deployTxHash: deployed.deployTxHash,
     };
     licenseRequest.status = 'accepted';
@@ -178,12 +185,12 @@ router.post(
     const chain = getBlockchainService();
     const funded = await chain.fundContract({
       contractAddress: licenseRequest.contract.address,
-      amountWei: licenseRequest.priceWei,
+      amountWei: licenseRequest.contract.royaltyWei,
       fromRole: 'company',
       fromAddress: licenseRequest.contract.companyAddress,
     });
 
-    licenseRequest.funding = { txHash: funded.txHash, amountWei: licenseRequest.priceWei };
+    licenseRequest.funding = { txHash: funded.txHash, amountWei: licenseRequest.contract.royaltyWei };
     licenseRequest.status = 'funded';
     await licenseRequest.save();
 
@@ -232,7 +239,6 @@ router.post(
       txHash: released.txHash,
       studentAmountWei: released.studentAmountWei,
       universityAmountWei: released.universityAmountWei,
-      companyAmountWei: released.companyAmountWei,
     };
     licenseRequest.status = 'released';
     await licenseRequest.save();

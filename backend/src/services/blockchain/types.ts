@@ -16,7 +16,10 @@ export interface DeployLicensingContractInput {
   companyAddress: string;
   studentBps: number;
   universityBps: number;
-  priceWei: string;
+  // Only the student+university royalty share to escrow (e.g. 15% of the agreed license
+  // value for 10%/5% bps) - NOT the full license price. The company's own share never
+  // moves through the contract. See LicensingRoyalty.sol's contract-level comment.
+  royaltyWei: string;
 }
 
 export interface DeployLicensingContractResult {
@@ -49,7 +52,6 @@ export interface ReleaseContractResult {
   txHash: string;
   studentAmountWei: string;
   universityAmountWei: string;
-  companyAmountWei: string;
 }
 
 export interface BlockchainService {

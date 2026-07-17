@@ -9,7 +9,8 @@ export interface ILicenseContract {
   companyAddress: string;
   studentBps: number;
   universityBps: number;
-  companyBps: number;
+  companyBps: number; // informational only; the company's share is never escrowed or paid out
+  royaltyWei: string; // the actual amount escrowed and funded: priceWei * (studentBps+universityBps)/10000
   deployTxHash: string;
 }
 
@@ -22,7 +23,6 @@ export interface IRelease {
   txHash: string;
   studentAmountWei: string;
   universityAmountWei: string;
-  companyAmountWei: string;
 }
 
 export interface ILicenseRequest extends Document {
@@ -48,6 +48,7 @@ const contractSchema = new Schema<ILicenseContract>(
     studentBps: { type: Number, required: true },
     universityBps: { type: Number, required: true },
     companyBps: { type: Number, required: true },
+    royaltyWei: { type: String, required: true },
     deployTxHash: { type: String, required: true },
   },
   { _id: false },
@@ -66,7 +67,6 @@ const releaseSchema = new Schema<IRelease>(
     txHash: { type: String, required: true },
     studentAmountWei: { type: String, required: true },
     universityAmountWei: { type: String, required: true },
-    companyAmountWei: { type: String, required: true },
   },
   { _id: false },
 );

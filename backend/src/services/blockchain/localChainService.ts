@@ -159,7 +159,7 @@ export class LocalChainService implements BlockchainService {
       input.companyAddress,
       input.studentBps,
       input.universityBps,
-      BigInt(input.priceWei),
+      BigInt(input.royaltyWei),
     );
     const receipt = await contract.deploymentTransaction()?.wait();
     if (!receipt) {
@@ -203,7 +203,6 @@ export class LocalChainService implements BlockchainService {
 
       let studentAmountWei = '0';
       let universityAmountWei = '0';
-      let companyAmountWei = '0';
       for (const log of receipt.logs as Log[]) {
         if (log.address.toLowerCase() !== input.contractAddress.toLowerCase()) continue;
         try {
@@ -211,7 +210,6 @@ export class LocalChainService implements BlockchainService {
           if (parsed && parsed.name === 'Released') {
             studentAmountWei = parsed.args.studentAmount.toString();
             universityAmountWei = parsed.args.universityAmount.toString();
-            companyAmountWei = parsed.args.companyAmount.toString();
             break;
           }
         } catch {
@@ -223,7 +221,6 @@ export class LocalChainService implements BlockchainService {
         txHash: receipt.hash,
         studentAmountWei,
         universityAmountWei,
-        companyAmountWei,
       };
     } finally {
       await this.stopImpersonating(input.fromAddress);

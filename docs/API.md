@@ -2,9 +2,13 @@
 
 Core end-to-end slice only: student uploads a project → SHA-256 hash anchored on-chain via
 an `OwnershipRegistry` Solidity contract → company requests a license → student accepts →
-company pays ETH into a `LicensingRoyalty` escrow contract instance → release splits funds
-10% student / 5% university / 85% company automatically, matching
-`InnovChain_Full_Concept_Document.pdf`.
+company escrows the student+university royalty share (10% + 5% = 15% of the agreed price)
+into a `LicensingRoyalty` contract instance → release pays that 15% out 10%/5% to
+student/university automatically. The company's own 85% share never enters the contract —
+it's the company's money and stays in the company's wallet unless they choose to fund it,
+matching `InnovChain_Full_Concept_Document.pdf`'s "Royalty Contract" (10% Student / 5%
+University / 85% Company), while avoiding the earlier design bug of literally paying 85%
+of the license fee back to the payer.
 
 Chain: Ethereum-compatible EVM (Hardhat local network for dev/demo; deployable unchanged to
 any public testnet, e.g. Sepolia, or the UZH Ethereum platform).
@@ -58,24 +62,27 @@ project: ObjectId -> Project
 company: ObjectId -> User (role company)
 durationMonths: number
 commercialUse: boolean
-priceWei: string           // stored as string (ethers BigNumber-safe)
+priceWei: string           // total agreed license value, stored as string (ethers BigNumber-safe)
 status: 'pending' | 'accepted' | 'rejected' | 'funded' | 'released'
 contract: {
   address: string           // deployed LicensingRoyalty instance address
   studentAddress: string
   universityAddress: string
   companyAddress: string
-  studentBps: number        // 1000 = 10%
-  universityBps: number     // 500 = 5%
-  companyBps: number        // 8500 = 85%, derived = 10000 - studentBps - universityBps
+  studentBps: number        // 1000 = 10% (of priceWei)
+  universityBps: number     // 500 = 5% (of priceWei)
+  companyBps: number        // 8500 = 85%, derived = 10000 - studentBps - universityBps.
+                             // Informational only - never escrowed or paid out on-chain.
+  royaltyWei: string        // priceWei * (studentBps+universityBps)/10000 - the ONLY amount
+                             // actually escrowed/funded/released; the company's 85% share
+                             // stays in the company's wallet and is never touched.
   deployTxHash: string
 }
-funding: { txHash: string, amountWei: string } | null
+funding: { txHash: string, amountWei: string } | null   // amountWei == contract.royaltyWei
 release: {
   txHash: string
   studentAmountWei: string
   universityAmountWei: string
-  companyAmountWei: string
 } | null
 createdAt
 ```
@@ -116,7 +123,9 @@ License requests
 - `POST /license-requests/:id/fund` (auth: company)
   → calls blockchain service `fundContract(address, priceWei)`, status→`funded`
 - `POST /license-requests/:id/release` (auth: student or company, only when `funded`)
-  → calls blockchain service `releaseContract(address)`, splits 10/5/85, status→`released`
+  → calls blockchain service `releaseContract(address)`, splits the escrowed royalty 10:5
+    between student and university (the company's 85% share was never escrowed, so nothing
+    is paid back to them here), status→`released`
 
 ## Blockchain service interface (backend/src/services/blockchain)
 
@@ -134,7 +143,8 @@ interface BlockchainService {
 
   deployLicensingContract(input: {
     studentAddress: string; universityAddress: string; companyAddress: string;
-    studentBps: number; universityBps: number; priceWei: string;
+    studentBps: number; universityBps: number;
+    royaltyWei: string; // student+university share ONLY - not the full license price
   }): Promise<{ address: string; deployTxHash: string }>;
 
   fundContract(input: { contractAddress: string; amountWei: string; fromRole: 'company' }):
@@ -142,7 +152,7 @@ interface BlockchainService {
 
   releaseContract(input: { contractAddress: string }): Promise<{
     txHash: string;
-    studentAmountWei: string; universityAmountWei: string; companyAmountWei: string;
+    studentAmountWei: string; universityAmountWei: string;
   }>;
 }
 ```
@@ -156,11 +166,19 @@ interface BlockchainService {
 - `contracts/contracts/LicensingRoyalty.sol` — one instance deployed per accepted license
   request (factory-less, deployed directly by the backend's signer for PoC simplicity).
   Holds `studentAddress/universityAddress/companyAddress` and `studentBps/universityBps`
-  (companyBps = 10000 − the other two). `fund()` is `payable`, callable once by the company
-  for the agreed price. `release()` splits the held balance 10/5/85 and pays out all three
-  parties in one transaction, then marks itself released. This embodies both the concept
-  doc's "Licensing Contract" (lock payment, transfer license) and "Royalty Contract" (10%
-  Student / 5% University / 85% Company).
+  (`companyBps` = 10000 − the other two, stored on-chain as informational metadata only).
+  `fund()` is `payable`, callable once by the company, for exactly `royaltyWei` — the
+  student+university share of the agreed price (e.g. 15% for 10%/5% bps), **not** the full
+  license value. `release()` splits the held balance between student and university only,
+  proportional to their relative bps, and pays both out in one transaction. The company
+  never receives a payout from this contract, because its 85% share was never escrowed in
+  the first place — that money simply stays in the company's own wallet. This embodies both
+  the concept doc's "Licensing Contract" (lock payment, transfer license) and "Royalty
+  Contract" (10% Student / 5% University / 85% Company) without the bug of literally routing
+  85% of the license fee back to the party that paid it — an earlier version of this PoC
+  escrowed the full price and refunded 85% to the company on release, which is functionally
+  equivalent to the company only ever paying 15%, just obscured. `companyBps` remains useful
+  as an on-chain, auditable record of what the company is understood to retain.
 
 ## Frontend routes (React Router)
 
