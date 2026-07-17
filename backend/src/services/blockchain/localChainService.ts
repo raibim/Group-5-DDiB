@@ -1,4 +1,4 @@
-import { ethers, Contract, JsonRpcProvider, Wallet, ContractFactory, Log } from 'ethers';
+import { ethers, Contract, JsonRpcProvider, JsonRpcSigner, Wallet, ContractFactory, Log } from 'ethers';
 import fs from 'fs';
 import path from 'path';
 import { env } from '../../config/env';
@@ -93,10 +93,16 @@ export class LocalChainService implements BlockchainService {
     await tx.wait();
   }
 
-  /** Impersonates `address` (Hardhat-only JSON-RPC method) and returns a signer for it. */
-  private async impersonate(address: string) {
+  /** Impersonates `address` (Hardhat-only JSON-RPC method) and returns a signer for it.
+   * Deliberately does NOT use `provider.getSigner(address)` - ethers v6's implementation
+   * cross-checks the address against `eth_accounts`, which only ever lists Hardhat's 10
+   * built-in dev accounts, so it throws "invalid account" for any other impersonated
+   * address (i.e. any real user-registered wallet). Constructing `JsonRpcSigner` directly
+   * skips that check and just sends transactions with `from: address`, which Hardhat
+   * accepts because of the impersonation call above. */
+  private async impersonate(address: string): Promise<JsonRpcSigner> {
     await this.provider.send('hardhat_impersonateAccount', [address]);
-    return this.provider.getSigner(address);
+    return new JsonRpcSigner(this.provider, address);
   }
 
   private async stopImpersonating(address: string): Promise<void> {
