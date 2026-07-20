@@ -36,30 +36,61 @@ docs/API.md  Shared data model, REST endpoints, and blockchain-service contract
 
 ## Running the full stack locally
 
-Prerequisites: Node.js 18+, a local MongoDB instance (`mongodb://127.0.0.1:27017` by
-default — e.g. `mongod` or `docker run -p 27017:27017 mongo`).
+### Prerequisites
+
+- **Node.js 18+** — [nodejs.org](https://nodejs.org) (LTS). Verify with `node -v`.
+- **Git**.
+- **A local MongoDB instance** at `mongodb://127.0.0.1:27017` by default. Easiest via Docker:
+  - Install **Docker Desktop** ([docker.com/products/docker-desktop](https://www.docker.com/products/docker-desktop)).
+  - **Launch the Docker Desktop app** and wait until it reports "Docker Desktop is running"
+    (first launch can take a minute or two, and on Windows may prompt to install/enable WSL2 —
+    follow its prompts and restart if asked).
+  - Then start Mongo **with a named volume**, so data survives container restarts/removals:
+    ```bash
+    docker volume create innovchain-mongo-data
+    docker run -d --name innovchain-mongo -p 27017:27017 -v innovchain-mongo-data:/data/db mongo:latest
+    ```
+    On future runs, don't recreate the container — just `docker start innovchain-mongo`
+    (and make sure Docker Desktop is open first). Only use `docker run` again if the container
+    doesn't exist yet; running `docker rm` on it discards nothing as long as the volume isn't
+    also removed, but there's no reason to remove it in normal use.
+  - Alternative without Docker: install MongoDB Community Server and run `mongod` directly.
+
+### Steps
 
 ```bash
 # 1. Install everything
 npm run install:all
 
-# 2. Terminal A — start a local Ethereum node (keep running)
-npm run chain:node
-
-# 3. Terminal B — deploy OwnershipRegistry to it
-npm run chain:deploy
-# copy the printed ownershipRegistry address into backend/.env (OWNERSHIP_REGISTRY_ADDRESS),
-# or leave it unset — the backend auto-reads contracts/deployments/localhost.json
-
-# 4. Terminal B — configure and start the backend
-cp backend/.env.example backend/.env   # defaults already point at the local chain + Mongo
-npm run backend:dev
-
-# 5. Terminal C — configure and start the frontend
+# 2. Configure env files (defaults already point at the local chain + Mongo)
+cp backend/.env.example backend/.env
 cp frontend/.env.example frontend/.env
+
+# 3. Terminal A — start a local Ethereum node (keep running)
+npm run chain:node
+# prints 20 funded test accounts + private keys — keep this terminal open
+
+# 4. Terminal B — deploy OwnershipRegistry to it (one-off per chain restart)
+npm run chain:deploy
+# writes the address to contracts/deployments/localhost.json, which the backend
+# auto-reads at startup — no manual copying into backend/.env needed
+
+# 5. Terminal B — start the backend (keep running)
+npm run backend:dev
+# should log "Connected to MongoDB" and "InnovChain backend listening on http://localhost:4000"
+
+# 6. Terminal C — start the frontend (keep running)
 npm run frontend:dev
 # open http://localhost:5173
 ```
+
+Each future session, once everything above is installed/configured once: open Docker Desktop →
+`docker start innovchain-mongo` → `npm run chain:node` → `npm run chain:deploy` →
+`npm run backend:dev` → `npm run frontend:dev`.
+
+Note: the local Hardhat chain is in-memory and resets every time `npm run chain:node` is
+restarted (a fresh chain needs `npm run chain:deploy` run again), but MongoDB data persists
+across restarts as long as the `innovchain-mongo-data` volume isn't deleted.
 
 Register a `student` account and a `company` account (any email/password, and any text in
 the "wallet address" field — for the local demo, paste one of the addresses Hardhat prints
