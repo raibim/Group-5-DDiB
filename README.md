@@ -16,10 +16,17 @@ chain (Hardhat locally; unchanged deploy path to any testnet):
 2. A **company** browses the marketplace and requests a license (duration, commercial-use
    flag, price in ETH).
 3. The student accepts. The backend deploys a fresh `LicensingRoyalty` contract instance
-   encoding a fixed 10% student / 5% university / 85% company split.
-4. The company funds the contract with the agreed price.
-5. Either party triggers `release()`, which atomically pays out all three parties in one
-   transaction — the concept doc's "Licensing Contract" + "Royalty Contract" combined.
+   encoding a fixed 85% student / 5% university / 10% platform split of the full sale price.
+4. The company funds the contract with the full agreed price (a sale, not a partial escrow).
+5. Either party triggers `release()`, which atomically splits and pays out that full amount
+   to all three parties in one transaction — the concept doc's "Licensing Contract" +
+   "Royalty Contract" combined. This also mints a **`LicenseNFT`** to the company: holding
+   the token IS holding the license.
+6. If the company later **sublicenses** (resells) that license to another company, a smaller
+   *resale royalty* (10% by default, split proportionally in the same 85:5:10 ratio — not the
+   original sale's full split) is enforced automatically on the resale price, atomically
+   alongside the NFT transfer, leaving the reselling company the rest as its own profit — and
+   the same applies again on any resale after that, since the split travels with the token.
 
 AI recommendation, university verification, admin moderation, and rich dashboards are
 explicitly out of scope for this PoC (see `docs/API.md`) and are called out as future work

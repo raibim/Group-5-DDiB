@@ -27,12 +27,13 @@ export interface LicensingRoyaltyInterface extends Interface {
   getFunction(
     nameOrSignature:
       | "companyAddress"
-      | "companyBps"
       | "fund"
       | "funded"
+      | "platformAddress"
+      | "platformBps"
+      | "priceWei"
       | "release"
       | "released"
-      | "royaltyWei"
       | "studentAddress"
       | "studentBps"
       | "universityAddress"
@@ -45,18 +46,19 @@ export interface LicensingRoyaltyInterface extends Interface {
     functionFragment: "companyAddress",
     values?: undefined
   ): string;
-  encodeFunctionData(
-    functionFragment: "companyBps",
-    values?: undefined
-  ): string;
   encodeFunctionData(functionFragment: "fund", values?: undefined): string;
   encodeFunctionData(functionFragment: "funded", values?: undefined): string;
-  encodeFunctionData(functionFragment: "release", values?: undefined): string;
-  encodeFunctionData(functionFragment: "released", values?: undefined): string;
   encodeFunctionData(
-    functionFragment: "royaltyWei",
+    functionFragment: "platformAddress",
     values?: undefined
   ): string;
+  encodeFunctionData(
+    functionFragment: "platformBps",
+    values?: undefined
+  ): string;
+  encodeFunctionData(functionFragment: "priceWei", values?: undefined): string;
+  encodeFunctionData(functionFragment: "release", values?: undefined): string;
+  encodeFunctionData(functionFragment: "released", values?: undefined): string;
   encodeFunctionData(
     functionFragment: "studentAddress",
     values?: undefined
@@ -78,12 +80,19 @@ export interface LicensingRoyaltyInterface extends Interface {
     functionFragment: "companyAddress",
     data: BytesLike
   ): Result;
-  decodeFunctionResult(functionFragment: "companyBps", data: BytesLike): Result;
   decodeFunctionResult(functionFragment: "fund", data: BytesLike): Result;
   decodeFunctionResult(functionFragment: "funded", data: BytesLike): Result;
+  decodeFunctionResult(
+    functionFragment: "platformAddress",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "platformBps",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(functionFragment: "priceWei", data: BytesLike): Result;
   decodeFunctionResult(functionFragment: "release", data: BytesLike): Result;
   decodeFunctionResult(functionFragment: "released", data: BytesLike): Result;
-  decodeFunctionResult(functionFragment: "royaltyWei", data: BytesLike): Result;
   decodeFunctionResult(
     functionFragment: "studentAddress",
     data: BytesLike
@@ -115,12 +124,18 @@ export namespace FundedEvent {
 export namespace ReleasedEvent {
   export type InputTuple = [
     studentAmount: BigNumberish,
-    universityAmount: BigNumberish
+    universityAmount: BigNumberish,
+    platformAmount: BigNumberish
   ];
-  export type OutputTuple = [studentAmount: bigint, universityAmount: bigint];
+  export type OutputTuple = [
+    studentAmount: bigint,
+    universityAmount: bigint,
+    platformAmount: bigint
+  ];
   export interface OutputObject {
     studentAmount: bigint;
     universityAmount: bigint;
+    platformAmount: bigint;
   }
   export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
   export type Filter = TypedDeferredTopicFilter<Event>;
@@ -173,17 +188,19 @@ export interface LicensingRoyalty extends BaseContract {
 
   companyAddress: TypedContractMethod<[], [string], "view">;
 
-  companyBps: TypedContractMethod<[], [bigint], "view">;
-
   fund: TypedContractMethod<[], [void], "payable">;
 
   funded: TypedContractMethod<[], [boolean], "view">;
 
+  platformAddress: TypedContractMethod<[], [string], "view">;
+
+  platformBps: TypedContractMethod<[], [bigint], "view">;
+
+  priceWei: TypedContractMethod<[], [bigint], "view">;
+
   release: TypedContractMethod<[], [void], "nonpayable">;
 
   released: TypedContractMethod<[], [boolean], "view">;
-
-  royaltyWei: TypedContractMethod<[], [bigint], "view">;
 
   studentAddress: TypedContractMethod<[], [string], "view">;
 
@@ -201,23 +218,26 @@ export interface LicensingRoyalty extends BaseContract {
     nameOrSignature: "companyAddress"
   ): TypedContractMethod<[], [string], "view">;
   getFunction(
-    nameOrSignature: "companyBps"
-  ): TypedContractMethod<[], [bigint], "view">;
-  getFunction(
     nameOrSignature: "fund"
   ): TypedContractMethod<[], [void], "payable">;
   getFunction(
     nameOrSignature: "funded"
   ): TypedContractMethod<[], [boolean], "view">;
   getFunction(
+    nameOrSignature: "platformAddress"
+  ): TypedContractMethod<[], [string], "view">;
+  getFunction(
+    nameOrSignature: "platformBps"
+  ): TypedContractMethod<[], [bigint], "view">;
+  getFunction(
+    nameOrSignature: "priceWei"
+  ): TypedContractMethod<[], [bigint], "view">;
+  getFunction(
     nameOrSignature: "release"
   ): TypedContractMethod<[], [void], "nonpayable">;
   getFunction(
     nameOrSignature: "released"
   ): TypedContractMethod<[], [boolean], "view">;
-  getFunction(
-    nameOrSignature: "royaltyWei"
-  ): TypedContractMethod<[], [bigint], "view">;
   getFunction(
     nameOrSignature: "studentAddress"
   ): TypedContractMethod<[], [string], "view">;
@@ -258,7 +278,7 @@ export interface LicensingRoyalty extends BaseContract {
       FundedEvent.OutputObject
     >;
 
-    "Released(uint256,uint256)": TypedContractEvent<
+    "Released(uint256,uint256,uint256)": TypedContractEvent<
       ReleasedEvent.InputTuple,
       ReleasedEvent.OutputTuple,
       ReleasedEvent.OutputObject

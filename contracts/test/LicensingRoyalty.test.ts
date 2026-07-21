@@ -2,61 +2,84 @@ import { expect } from "chai";
 import { ethers } from "hardhat";
 
 describe("LicensingRoyalty", function () {
-  const STUDENT_BPS = 1000; // 10% of the total license value
-  const UNIVERSITY_BPS = 500; // 5% of the total license value
-  // Only the student+university share is ever escrowed: for a 1 ETH license, that's
-  // 0.15 ETH (10% + 5%). The company's remaining 85% never enters this contract.
-  const ROYALTY_WEI = ethers.parseEther("0.15");
+  const STUDENT_BPS = 8500; // 85% of the full sale price
+  const UNIVERSITY_BPS = 500; // 5%
+  const PLATFORM_BPS = 1000; // 10%
+  // The company funds the FULL agreed sale price - nothing is held back.
+  const PRICE_WEI = ethers.parseEther("1");
 
   async function deploy() {
-    const [, student, university, company, stranger] = await ethers.getSigners();
+    const [, student, university, company, platform, stranger] = await ethers.getSigners();
     const Factory = await ethers.getContractFactory("LicensingRoyalty");
     const contract = await Factory.deploy(
       student.address,
       university.address,
       company.address,
+      platform.address,
       STUDENT_BPS,
       UNIVERSITY_BPS,
-      ROYALTY_WEI
+      PLATFORM_BPS,
+      PRICE_WEI
     );
     await contract.waitForDeployment();
-    return { contract, student, university, company, stranger };
+    return { contract, student, university, company, platform, stranger };
   }
 
-  it("derives companyBps as the remainder (informational only)", async function () {
+  it("stores the bps split and full price", async function () {
     const { contract } = await deploy();
-    expect(await contract.companyBps()).to.equal(10000 - STUDENT_BPS - UNIVERSITY_BPS);
+    expect(await contract.studentBps()).to.equal(STUDENT_BPS);
+    expect(await contract.universityBps()).to.equal(UNIVERSITY_BPS);
+    expect(await contract.platformBps()).to.equal(PLATFORM_BPS);
+    expect(await contract.priceWei()).to.equal(PRICE_WEI);
   });
 
-  it("rejects deployment with bps summing over 100%", async function () {
+  it("rejects deployment when bps don't sum to exactly 100%", async function () {
+    const [, student, university, company, platform] = await ethers.getSigners();
+    const Factory = await ethers.getContractFactory("LicensingRoyalty");
+    await expect(
+      Factory.deploy(
+        student.address,
+        university.address,
+        company.address,
+        platform.address,
+        8500,
+        500,
+        900, // sums to 9900, not 10000
+        PRICE_WEI
+      )
+    ).to.be.revertedWith("InnovChain: bps must sum to 100%");
+  });
+
+  it("rejects a zero platform address", async function () {
     const [, student, university, company] = await ethers.getSigners();
     const Factory = await ethers.getContractFactory("LicensingRoyalty");
     await expect(
-      Factory.deploy(student.address, university.address, company.address, 6000, 5000, ROYALTY_WEI)
-    ).to.be.revertedWith("InnovChain: bps overflow");
+      Factory.deploy(
+        student.address,
+        university.address,
+        company.address,
+        ethers.ZeroAddress,
+        STUDENT_BPS,
+        UNIVERSITY_BPS,
+        PLATFORM_BPS,
+        PRICE_WEI
+      )
+    ).to.be.revertedWith("InnovChain: zero address");
   });
 
-  it("rejects deployment with zero bps for both student and university", async function () {
-    const [, student, university, company] = await ethers.getSigners();
-    const Factory = await ethers.getContractFactory("LicensingRoyalty");
-    await expect(
-      Factory.deploy(student.address, university.address, company.address, 0, 0, ROYALTY_WEI)
-    ).to.be.revertedWith("InnovChain: bps must be > 0");
-  });
-
-  it("only allows the company to fund, with the exact royalty amount", async function () {
+  it("only allows the company to fund, with the exact full sale price", async function () {
     const { contract, company, stranger } = await deploy();
 
-    await expect(contract.connect(stranger).fund({ value: ROYALTY_WEI })).to.be.revertedWith(
+    await expect(contract.connect(stranger).fund({ value: PRICE_WEI })).to.be.revertedWith(
       "InnovChain: only licensee company may fund"
     );
     await expect(
-      contract.connect(company).fund({ value: ethers.parseEther("0.05") })
+      contract.connect(company).fund({ value: ethers.parseEther("0.5") })
     ).to.be.revertedWith("InnovChain: incorrect amount");
 
-    await expect(contract.connect(company).fund({ value: ROYALTY_WEI }))
+    await expect(contract.connect(company).fund({ value: PRICE_WEI }))
       .to.emit(contract, "Funded")
-      .withArgs(company.address, ROYALTY_WEI);
+      .withArgs(company.address, PRICE_WEI);
 
     expect(await contract.funded()).to.equal(true);
   });
@@ -68,13 +91,14 @@ describe("LicensingRoyalty", function () {
     );
   });
 
-  it("splits the escrowed royalty 10:5 between student and university, with no company payout", async function () {
-    const { contract, student, university, company } = await deploy();
-    await contract.connect(company).fund({ value: ROYALTY_WEI });
+  it("splits the full escrowed price 85:5:10 between student, university, and platform", async function () {
+    const { contract, student, university, company, platform } = await deploy();
+    await contract.connect(company).fund({ value: PRICE_WEI });
 
     const before = {
       student: await ethers.provider.getBalance(student.address),
       university: await ethers.provider.getBalance(university.address),
+      platform: await ethers.provider.getBalance(platform.address),
       company: await ethers.provider.getBalance(company.address),
     };
 
@@ -82,22 +106,23 @@ describe("LicensingRoyalty", function () {
     const receipt = await tx.wait();
     const gasCost = receipt!.gasUsed * receipt!.gasPrice;
 
-    // Student:University split is 1000:500 = 2:1 of the escrowed royalty.
-    const expectedStudent = (ROYALTY_WEI * BigInt(STUDENT_BPS)) / BigInt(STUDENT_BPS + UNIVERSITY_BPS);
-    const expectedUniversity = ROYALTY_WEI - expectedStudent;
+    const expectedStudent = (PRICE_WEI * BigInt(STUDENT_BPS)) / 10000n;
+    const expectedUniversity = (PRICE_WEI * BigInt(UNIVERSITY_BPS)) / 10000n;
+    const expectedPlatform = PRICE_WEI - expectedStudent - expectedUniversity;
 
     const after = {
       student: await ethers.provider.getBalance(student.address),
       university: await ethers.provider.getBalance(university.address),
+      platform: await ethers.provider.getBalance(platform.address),
       company: await ethers.provider.getBalance(company.address),
     };
 
-    expect(after.university - before.university).to.equal(expectedUniversity);
-    // student paid the gas for this tx since they called release(), so net change is
-    // the payout minus gas spent
+    // student paid gas for this tx since they called release(), so net change is the
+    // payout minus gas spent
     expect(after.student - before.student + gasCost).to.equal(expectedStudent);
-    // the company never receives anything from this contract - its 85% share was never
-    // escrowed in the first place
+    expect(after.university - before.university).to.equal(expectedUniversity);
+    expect(after.platform - before.platform).to.equal(expectedPlatform);
+    // the company never receives anything back from this contract - it was purely the payer
     expect(after.company - before.company).to.equal(0n);
 
     expect(await ethers.provider.getBalance(await contract.getAddress())).to.equal(0);
@@ -106,7 +131,7 @@ describe("LicensingRoyalty", function () {
 
   it("cannot be released twice", async function () {
     const { contract, student, company } = await deploy();
-    await contract.connect(company).fund({ value: ROYALTY_WEI });
+    await contract.connect(company).fund({ value: PRICE_WEI });
     await contract.connect(student).release();
     await expect(contract.connect(student).release()).to.be.revertedWith(
       "InnovChain: already released"
@@ -115,8 +140,8 @@ describe("LicensingRoyalty", function () {
 
   it("rejects funding twice", async function () {
     const { contract, company } = await deploy();
-    await contract.connect(company).fund({ value: ROYALTY_WEI });
-    await expect(contract.connect(company).fund({ value: ROYALTY_WEI })).to.be.revertedWith(
+    await contract.connect(company).fund({ value: PRICE_WEI });
+    await expect(contract.connect(company).fund({ value: PRICE_WEI })).to.be.revertedWith(
       "InnovChain: already funded"
     );
   });

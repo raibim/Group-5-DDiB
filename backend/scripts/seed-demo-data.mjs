@@ -54,7 +54,7 @@ const projects = [
     category: 'summer-school',
     title: 'InnovChain',
     description:
-      'AI-powered blockchain innovation marketplace connecting student inventors, universities, and companies. On-chain proof of ownership, semantic AI matching, and automated licensing/royalty smart contracts (10% student / 5% university / 85% company) replace slow, trust-based commercialization deals. This is the InnovChain platform itself, submitted as our Group 5 entry for the 7th International Summer School - Deep Dive into Blockchain 2026 (UZH).',
+      'AI-powered blockchain innovation marketplace connecting student inventors, universities, and companies. On-chain proof of ownership, semantic AI matching, and automated licensing/sale smart contracts (85% student / 5% university / 10% platform) replace slow, trust-based commercialization deals. This is the InnovChain platform itself, submitted as our Group 5 entry for the 7th International Summer School - Deep Dive into Blockchain 2026 (UZH).',
     tags: ['Blockchain', 'AI', 'Marketplace', 'Licensing'],
     file: () => {
       const content = readFileSync(README_PATH, 'utf-8');

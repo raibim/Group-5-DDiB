@@ -4,7 +4,7 @@ import { Project } from '../models/Project';
 import { LicenseRequest } from '../models/LicenseRequest';
 import { User } from '../models/User';
 import { requireAuth, requireRole } from '../middleware/auth';
-import { createLicenseRequestSchema } from '../validation/schemas';
+import { createLicenseRequestSchema, sublicenseRequestSchema } from '../validation/schemas';
 import { asyncHandler } from '../utils/asyncHandler';
 import { HttpError } from '../middleware/errorHandler';
 import { getBlockchainService } from '../services/blockchain';
@@ -12,9 +12,19 @@ import { env } from '../config/env';
 
 const router = Router();
 
-const STUDENT_BPS = 1000; // 10%
+// Sale model: the company pays the FULL agreed price, which is then split three ways.
+const STUDENT_BPS = 8500; // 85%
 const UNIVERSITY_BPS = 500; // 5%
-// companyBps = 10000 - STUDENT_BPS - UNIVERSITY_BPS = 8500 (85%), derived on-chain.
+const PLATFORM_BPS = 1000; // 10%
+
+// Resale royalty: if this license is later sublicensed, only this fraction of the resale
+// price is split out to student/university/platform - NOT the same 85/5/10 as the original
+// sale. Reapplying a 100%-of-price split on every resale would leave the reselling company
+// with $0 profit no matter what it resells for, which defeats the point of a resale. This
+// rate is deliberately smaller and tunable independent of the original sale split, split
+// proportionally across student:university:platform in the same 85:5:10 ratio.
+const RESALE_ROYALTY_BPS = 1000; // 10% of any future resale price; the remaining 90% goes to
+// the reselling company - i.e. its actual resale profit.
 
 // POST /projects/:id/license-requests
 router.post(
@@ -105,20 +115,18 @@ router.post(
       throw new HttpError(404, 'Requesting company not found');
     }
 
-    // Only the student+university royalty share is ever escrowed on-chain - the company's
-    // remaining share (companyBps, informational) never moves through the contract. See
-    // LicensingRoyalty.sol's contract-level comment for the full rationale.
-    const royaltyBps = STUDENT_BPS + UNIVERSITY_BPS;
-    const royaltyWei = ((BigInt(licenseRequest.priceWei) * BigInt(royaltyBps)) / 10000n).toString();
-
+    // Sale model: the company escrows the FULL agreed price. release() then splits it
+    // 85%/5%/10% across student/university/platform. See LicensingRoyalty.sol.
     const chain = getBlockchainService();
     const deployed = await chain.deployLicensingContract({
       studentAddress: req.user!.walletAddress,
       universityAddress: env.UNIVERSITY_WALLET_ADDRESS,
       companyAddress: companyUser.walletAddress,
+      platformAddress: env.PLATFORM_WALLET_ADDRESS,
       studentBps: STUDENT_BPS,
       universityBps: UNIVERSITY_BPS,
-      royaltyWei,
+      platformBps: PLATFORM_BPS,
+      priceWei: licenseRequest.priceWei,
     });
 
     licenseRequest.contract = {
@@ -126,10 +134,11 @@ router.post(
       studentAddress: req.user!.walletAddress,
       universityAddress: env.UNIVERSITY_WALLET_ADDRESS,
       companyAddress: companyUser.walletAddress,
+      platformAddress: env.PLATFORM_WALLET_ADDRESS,
       studentBps: STUDENT_BPS,
       universityBps: UNIVERSITY_BPS,
-      companyBps: 10000 - STUDENT_BPS - UNIVERSITY_BPS,
-      royaltyWei,
+      platformBps: PLATFORM_BPS,
+      priceWei: licenseRequest.priceWei,
       deployTxHash: deployed.deployTxHash,
     };
     licenseRequest.status = 'accepted';
@@ -185,12 +194,12 @@ router.post(
     const chain = getBlockchainService();
     const funded = await chain.fundContract({
       contractAddress: licenseRequest.contract.address,
-      amountWei: licenseRequest.contract.royaltyWei,
+      amountWei: licenseRequest.contract.priceWei,
       fromRole: 'company',
       fromAddress: licenseRequest.contract.companyAddress,
     });
 
-    licenseRequest.funding = { txHash: funded.txHash, amountWei: licenseRequest.contract.royaltyWei };
+    licenseRequest.funding = { txHash: funded.txHash, amountWei: licenseRequest.contract.priceWei };
     licenseRequest.status = 'funded';
     await licenseRequest.save();
 
@@ -239,8 +248,95 @@ router.post(
       txHash: released.txHash,
       studentAmountWei: released.studentAmountWei,
       universityAmountWei: released.universityAmountWei,
+      platformAmountWei: released.platformAmountWei,
     };
     licenseRequest.status = 'released';
+
+    // Mint the license NFT to the company now that the sale has actually completed - holding
+    // the token IS holding the license from here on. The token carries its OWN (smaller)
+    // resale-royalty split, proportional to the original sale's 85:5:10 ratio but scaled down
+    // to RESALE_ROYALTY_BPS - not a re-application of the full sale split.
+    const resaleStudentBps = Math.floor((STUDENT_BPS * RESALE_ROYALTY_BPS) / 10000);
+    const resaleUniversityBps = Math.floor((UNIVERSITY_BPS * RESALE_ROYALTY_BPS) / 10000);
+    const resalePlatformBps = RESALE_ROYALTY_BPS - resaleStudentBps - resaleUniversityBps;
+
+    const minted = await chain.mintLicense({
+      toAddress: licenseRequest.contract.companyAddress,
+      // A short numeric tag for the on-chain event log only (not the Mongo _id itself, which
+      // isn't numeric) - last 8 hex chars of the ObjectId, parsed as a uint.
+      sourceLicenseRequestId: parseInt(licenseRequest._id.toString().slice(-8), 16),
+      studentAddress: licenseRequest.contract.studentAddress,
+      universityAddress: licenseRequest.contract.universityAddress,
+      platformAddress: licenseRequest.contract.platformAddress,
+      studentBps: resaleStudentBps,
+      universityBps: resaleUniversityBps,
+      platformBps: resalePlatformBps,
+    });
+    licenseRequest.licenseNft = {
+      tokenId: minted.tokenId,
+      mintTxHash: minted.mintTxHash,
+      studentBps: resaleStudentBps,
+      universityBps: resaleUniversityBps,
+      platformBps: resalePlatformBps,
+    };
+
+    await licenseRequest.save();
+
+    res.json({ licenseRequest });
+  }),
+);
+
+// POST /license-requests/:id/sublicense
+// The CURRENT holder (company) resells the license NFT to another registered company. The
+// token's resale-royalty split (RESALE_ROYALTY_BPS, NOT the original 85/5/10 sale split) is
+// enforced again automatically on the resale price - see LicenseNFT.sublicense().
+router.post(
+  '/license-requests/:id/sublicense',
+  requireAuth,
+  requireRole('company'),
+  asyncHandler(async (req, res) => {
+    const licenseRequest = await LicenseRequest.findById(req.params.id);
+    if (!licenseRequest) {
+      throw new HttpError(404, 'License request not found');
+    }
+    if (licenseRequest.company.toString() !== req.user!._id.toString()) {
+      throw new HttpError(403, 'Only the current license holder may sublicense it');
+    }
+    if (licenseRequest.status !== 'released' || !licenseRequest.licenseNft || !licenseRequest.contract) {
+      throw new HttpError(400, 'License request has no license NFT to sublicense yet');
+    }
+
+    const body = sublicenseRequestSchema.parse(req.body);
+    const buyer = await User.findById(body.toCompanyId);
+    if (!buyer || buyer.role !== 'company') {
+      throw new HttpError(404, 'Target company not found');
+    }
+    if (buyer._id.toString() === req.user!._id.toString()) {
+      throw new HttpError(400, 'Cannot sublicense to yourself');
+    }
+
+    const priceWei = ethers.parseEther(body.priceEth.toString()).toString();
+
+    const chain = getBlockchainService();
+    const result = await chain.sublicense({
+      tokenId: licenseRequest.licenseNft.tokenId,
+      fromAddress: req.user!.walletAddress,
+      toAddress: buyer.walletAddress,
+      priceWei,
+    });
+
+    licenseRequest.sublicenses.push({
+      toCompany: buyer._id,
+      toAddress: buyer.walletAddress,
+      priceWei,
+      txHash: result.txHash,
+      studentAmountWei: result.studentAmountWei,
+      universityAmountWei: result.universityAmountWei,
+      platformAmountWei: result.platformAmountWei,
+      sellerAmountWei: result.sellerAmountWei,
+      createdAt: new Date(),
+    });
+    licenseRequest.company = buyer._id;
     await licenseRequest.save();
 
     res.json({ licenseRequest });

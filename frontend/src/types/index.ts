@@ -59,10 +59,11 @@ export interface LicenseContract {
   studentAddress: string;
   universityAddress: string;
   companyAddress: string;
+  platformAddress: string;
   studentBps: number;
   universityBps: number;
-  companyBps: number; // informational only; the company's share is never escrowed or paid out
-  royaltyWei: string; // the actual amount escrowed and funded (student+university share only)
+  platformBps: number;
+  priceWei: string; // the FULL sale price; escrowed and paid out in full on release
   deployTxHash: string;
 }
 
@@ -75,12 +76,35 @@ export interface LicenseRelease {
   txHash: string;
   studentAmountWei: string;
   universityAmountWei: string;
+  platformAmountWei: string;
+}
+
+export interface LicenseNft {
+  tokenId: number;
+  mintTxHash: string;
+  // The resale royalty split (deliberately smaller than the original sale's studentBps/
+  // universityBps/platformBps on `contract`) - what actually applies on a sublicense.
+  studentBps: number;
+  universityBps: number;
+  platformBps: number;
+}
+
+export interface Sublicense {
+  toCompany: string | User;
+  toAddress: string;
+  priceWei: string;
+  txHash: string;
+  studentAmountWei: string;
+  universityAmountWei: string;
+  platformAmountWei: string;
+  sellerAmountWei: string;
+  createdAt: string;
 }
 
 export interface LicenseRequest {
   _id: string;
   project: string | Project;
-  company: string | User;
+  company: string | User; // the CURRENT holder - moves on each sublicense
   durationMonths: number;
   commercialUse: boolean;
   priceWei: string;
@@ -88,6 +112,8 @@ export interface LicenseRequest {
   contract: LicenseContract | null;
   funding: LicenseFunding | null;
   release: LicenseRelease | null;
+  licenseNft: LicenseNft | null;
+  sublicenses: Sublicense[];
   createdAt: string;
 }
 

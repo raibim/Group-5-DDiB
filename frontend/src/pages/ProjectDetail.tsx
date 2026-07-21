@@ -200,6 +200,10 @@ export default function ProjectDetail() {
                 value={priceEth}
                 onChange={(e) => setPriceEth(e.target.value)}
               />
+              <p className="mt-1 text-xs text-ink-400">
+                This is the full amount you'll pay if accepted. On release it splits 85% to
+                the student, 5% to the university, and 10% to the platform.
+              </p>
             </div>
 
             <label className="flex items-center gap-2 text-sm text-ink-200">

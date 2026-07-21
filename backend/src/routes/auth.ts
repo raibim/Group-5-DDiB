@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import bcrypt from 'bcryptjs';
 import { User, toPublicUser } from '../models/User';
-import { signToken, requireAuth } from '../middleware/auth';
+import { signToken, requireAuth, requireRole } from '../middleware/auth';
 import { registerSchema, loginSchema } from '../validation/schemas';
 import { asyncHandler } from '../utils/asyncHandler';
 import { HttpError } from '../middleware/errorHandler';
@@ -56,6 +56,17 @@ router.get(
   requireAuth,
   asyncHandler(async (req, res) => {
     res.json({ user: toPublicUser(req.user!) });
+  }),
+);
+
+// GET /auth/companies - other registered companies, for the sublicense "transfer to" picker.
+router.get(
+  '/companies',
+  requireAuth,
+  requireRole('company'),
+  asyncHandler(async (req, res) => {
+    const companies = await User.find({ role: 'company', _id: { $ne: req.user!._id } });
+    res.json({ companies: companies.map(toPublicUser) });
   }),
 );
 

@@ -102,6 +102,15 @@ export const authApi = {
       throw unwrapError(err);
     }
   },
+
+  async companies(): Promise<User[]> {
+    try {
+      const { data } = await http.get<{ companies: User[] }>('/auth/companies');
+      return data.companies;
+    } catch (err) {
+      throw unwrapError(err);
+    }
+  },
 };
 
 // ---- Projects ----
@@ -260,6 +269,21 @@ export const licenseRequestsApi = {
     try {
       const { data } = await http.post<{ licenseRequest: LicenseRequest }>(
         `/license-requests/${id}/release`,
+      );
+      return data.licenseRequest;
+    } catch (err) {
+      throw unwrapError(err);
+    }
+  },
+
+  async sublicense(
+    id: string,
+    input: { toCompanyId: string; priceEth: string },
+  ): Promise<LicenseRequest> {
+    try {
+      const { data } = await http.post<{ licenseRequest: LicenseRequest }>(
+        `/license-requests/${id}/sublicense`,
+        input,
       );
       return data.licenseRequest;
     } catch (err) {

@@ -42,3 +42,8 @@ export const createLicenseRequestSchema = z.object({
   commercialUse: z.coerce.boolean(),
   priceEth: z.coerce.number().positive(),
 });
+
+export const sublicenseRequestSchema = z.object({
+  toCompanyId: z.string().min(1),
+  priceEth: z.coerce.number().positive(),
+});

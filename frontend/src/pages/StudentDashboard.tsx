@@ -383,21 +383,42 @@ export default function StudentDashboard() {
                 {r.release && r.contract && (
                   <div className="mt-3 rounded-md bg-lime-500/10 p-3 text-xs text-lime-300">
                     <p className="font-semibold">
-                      Royalty released ({r.contract.studentBps / 100}% student /{' '}
-                      {r.contract.universityBps / 100}% university)
+                      Sale released ({r.contract.studentBps / 100}% student /{' '}
+                      {r.contract.universityBps / 100}% university /{' '}
+                      {r.contract.platformBps / 100}% platform)
                     </p>
                     <p>Student: {weiToEth(r.release.studentAmountWei)} ETH</p>
                     <p>University: {weiToEth(r.release.universityAmountWei)} ETH</p>
-                    <p className="mt-1 text-lime-400">
-                      Company retains the remaining {r.contract.companyBps / 100}% (
-                      {weiToEth(
-                        (BigInt(r.priceWei) - BigInt(r.contract.royaltyWei)).toString(),
-                      )}{' '}
-                      ETH) — it was never escrowed.
-                    </p>
+                    <p>Platform: {weiToEth(r.release.platformAmountWei)} ETH</p>
                     <p className="mt-1 font-mono text-[11px] text-lime-300">
                       tx: {shortenHash(r.release.txHash)}
                     </p>
+                  </div>
+                )}
+
+                {r.licenseNft && (
+                  <div className="mt-3 rounded-md bg-brand-500/10 p-3 text-xs text-brand-300">
+                    License NFT #{r.licenseNft.tokenId} minted — currently held by{' '}
+                    {companyName(r.company)}. If it's ever sublicensed to another company,
+                    your {r.licenseNft.studentBps / 100}% share of that resale price is paid
+                    to your wallet automatically.
+                  </div>
+                )}
+
+                {r.sublicenses.length > 0 && (
+                  <div className="mt-3 rounded-md bg-ink-800/70 border border-ink-700 p-3 text-xs text-ink-300">
+                    <p className="font-semibold text-ink-200">Sublicense history</p>
+                    <ul className="mt-1 space-y-2">
+                      {r.sublicenses.map((s, i) => (
+                        <li key={i} className="font-mono text-[11px]">
+                          <p>
+                            → {companyName(s.toCompany)} for {weiToEth(s.priceWei)} ETH
+                          </p>
+                          <p>your share: {weiToEth(s.studentAmountWei)} ETH</p>
+                          <p>tx: {shortenHash(s.txHash)}</p>
+                        </li>
+                      ))}
+                    </ul>
                   </div>
                 )}
               </li>

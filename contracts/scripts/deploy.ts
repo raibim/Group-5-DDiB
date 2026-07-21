@@ -9,9 +9,16 @@ async function main() {
   const Registry = await ethers.getContractFactory("OwnershipRegistry");
   const registry = await Registry.deploy();
   await registry.waitForDeployment();
+  const registryAddress = await registry.getAddress();
+  console.log(`OwnershipRegistry deployed at ${registryAddress}`);
 
-  const address = await registry.getAddress();
-  console.log(`OwnershipRegistry deployed at ${address}`);
+  // Owned by the deployer (the backend's operator wallet in local/testnet mode), which is
+  // what lets the backend call the owner-only mint() after a sale releases.
+  const LicenseNft = await ethers.getContractFactory("LicenseNFT");
+  const licenseNft = await LicenseNft.deploy(deployer.address);
+  await licenseNft.waitForDeployment();
+  const licenseNftAddress = await licenseNft.getAddress();
+  console.log(`LicenseNFT deployed at ${licenseNftAddress}`);
 
   const outDir = path.join(__dirname, "..", "deployments");
   fs.mkdirSync(outDir, { recursive: true });
@@ -21,7 +28,8 @@ async function main() {
     JSON.stringify(
       {
         network: network.name,
-        ownershipRegistry: address,
+        ownershipRegistry: registryAddress,
+        licenseNft: licenseNftAddress,
         deployer: deployer.address,
         deployedAt: new Date().toISOString(),
       },

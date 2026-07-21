@@ -2,13 +2,23 @@
 
 Core end-to-end slice only: student uploads a project → SHA-256 hash anchored on-chain via
 an `OwnershipRegistry` Solidity contract → company requests a license → student accepts →
-company escrows the student+university royalty share (10% + 5% = 15% of the agreed price)
-into a `LicensingRoyalty` contract instance → release pays that 15% out 10%/5% to
-student/university automatically. The company's own 85% share never enters the contract —
-it's the company's money and stays in the company's wallet unless they choose to fund it,
-matching `InnovChain_Full_Concept_Document.pdf`'s "Royalty Contract" (10% Student / 5%
-University / 85% Company), while avoiding the earlier design bug of literally paying 85%
-of the license fee back to the payer.
+company escrows the FULL agreed sale price into a `LicensingRoyalty` contract instance →
+release pays that full amount out 85%/5%/10% to student/university/platform automatically →
+**a `LicenseNFT` is minted to the company**, so holding the token IS holding the license. If
+the company later resells ("sublicenses") that right to another company, a smaller *resale
+royalty* (`RESALE_ROYALTY_BPS`, 10% by default — not the original sale's full 85/5/10) is
+enforced again automatically on the resale price, and again on any resale after that, since
+the split travels with the token. The remaining 90% is the reselling company's own resale
+profit; reapplying the full 100%-of-price sale split on every resale would leave it with
+nothing to gain from reselling at all.
+
+This is a **sale model**: the company pays the entire price up front, and the contract is the
+one that divides it — a deliberate flip from an earlier revenue-share framing (10% Student /
+5% University / 85% Company, per `InnovChain_Full_Concept_Document.pdf`'s "Royalty Contract")
+where the company was treated as a majority stakeholder who never actually paid in its own
+share. The sale model is more intuitive for a one-time licensing transaction: the student
+lists a price, and a fixed 85%/5%/10% cut goes to student/university/platform once that price
+is paid.
 
 Chain: Ethereum-compatible EVM (Hardhat local network for dev/demo; deployable unchanged to
 any public testnet, e.g. Sepolia, or the UZH Ethereum platform).
@@ -59,7 +69,7 @@ createdAt
 ```
 _id
 project: ObjectId -> Project
-company: ObjectId -> User (role company)
+company: ObjectId -> User (role company)   // the CURRENT license holder - moves on each sublicense
 durationMonths: number
 commercialUse: boolean
 priceWei: string           // total agreed license value, stored as string (ethers BigNumber-safe)
@@ -68,22 +78,39 @@ contract: {
   address: string           // deployed LicensingRoyalty instance address
   studentAddress: string
   universityAddress: string
-  companyAddress: string
-  studentBps: number        // 1000 = 10% (of priceWei)
+  companyAddress: string    // the ORIGINAL buyer's address, fixed at accept time
+  platformAddress: string   // InnovChain's own cut - see PLATFORM_WALLET_ADDRESS below
+  studentBps: number        // 8500 = 85% (of priceWei)
   universityBps: number     // 500 = 5% (of priceWei)
-  companyBps: number        // 8500 = 85%, derived = 10000 - studentBps - universityBps.
-                             // Informational only - never escrowed or paid out on-chain.
-  royaltyWei: string        // priceWei * (studentBps+universityBps)/10000 - the ONLY amount
-                             // actually escrowed/funded/released; the company's 85% share
-                             // stays in the company's wallet and is never touched.
+  platformBps: number       // 1000 = 10% (of priceWei); the three bps values sum to 10000
+  priceWei: string          // the FULL sale price - escrowed and paid out in full on release
   deployTxHash: string
 }
-funding: { txHash: string, amountWei: string } | null   // amountWei == contract.royaltyWei
+funding: { txHash: string, amountWei: string } | null   // amountWei == contract.priceWei
 release: {
   txHash: string
   studentAmountWei: string
   universityAmountWei: string
+  platformAmountWei: string
 } | null
+licenseNft: {
+  tokenId: number          // LicenseNFT token id, minted to `contract.companyAddress` on release
+  mintTxHash: string
+  studentBps: number       // RESALE royalty split - deliberately smaller than and independent
+  universityBps: number    // of contract.studentBps/universityBps/platformBps above, so a
+  platformBps: number      // reselling company keeps most of any future resale price
+} | null
+sublicenses: [{             // one entry per resale; `company` above is updated to `toCompany` each time
+  toCompany: ObjectId -> User (role company)
+  toAddress: string
+  priceWei: string
+  txHash: string
+  studentAmountWei: string
+  universityAmountWei: string
+  platformAmountWei: string
+  sellerAmountWei: string   // what's left of priceWei after the resale royalty split (licenseNft's bps, not contract's) - paid to the reselling company
+  createdAt: Date
+}]
 createdAt
 ```
 
@@ -102,6 +129,8 @@ Auth
 - `POST /auth/register` `{ email, password, role, name, walletAddress }` → `{ token, user }`
 - `POST /auth/login` `{ email, password }` → `{ token, user }`
 - `GET  /auth/me` (auth) → `{ user }`
+- `GET  /auth/companies` (auth: company) → `{ companies: User[] }` — other registered
+  companies, for the sublicense "transfer to" picker
 
 Projects
 - `POST /projects` (auth: student, multipart form: file + title + description + category + tags[] + visibility)
@@ -116,16 +145,27 @@ License requests
 - `GET  /license-requests/mine` (auth: student|company) → requests relevant to the caller
 - `GET  /license-requests/:id` → detail
 - `POST /license-requests/:id/accept` (auth: student, must own project)
-  → derives royalty split addresses (student=owner, university=platform-fixed demo address,
-    company=requester), calls blockchain service `deployLicensingContract`, status→`accepted`
+  → derives sale split addresses (student=owner, university=fixed demo address,
+    company=requester, platform=fixed demo address), calls blockchain service
+    `deployLicensingContract`, status→`accepted`
 - `POST /license-requests/:id/reject` (auth: student, must own project, only when `pending`)
   → status→`rejected`, no blockchain call
 - `POST /license-requests/:id/fund` (auth: company)
-  → calls blockchain service `fundContract(address, priceWei)`, status→`funded`
+  → calls blockchain service `fundContract(address, priceWei)` with the FULL price,
+    status→`funded`
 - `POST /license-requests/:id/release` (auth: student or company, only when `funded`)
-  → calls blockchain service `releaseContract(address)`, splits the escrowed royalty 10:5
-    between student and university (the company's 85% share was never escrowed, so nothing
-    is paid back to them here), status→`released`
+  → calls blockchain service `releaseContract(address)`, splits the full escrowed price
+    85:5:10 between student, university, and platform, status→`released`; then calls
+    `mintLicense` to mint the `LicenseNFT` to the company, recording `licenseNft`. The bps
+    passed to `mintLicense` (and stored on `licenseNft`) are `RESALE_ROYALTY_BPS` (10% total,
+    default) scaled proportionally across the original 85:5:10 ratio - NOT the original sale's
+    full bps - so a future resale doesn't give away the entire resale price again.
+- `POST /license-requests/:id/sublicense` (auth: company, must be the current holder,
+  only when `status='released'`) `{ toCompanyId, priceEth }`
+  → looks up the target company's wallet, calls blockchain service `sublicense(tokenId,
+    toAddress, priceWei)` (enforces `licenseNft`'s resale-royalty split on the resale price
+    atomically, then transfers the NFT), appends to `sublicenses`, and updates `company` to
+    the new holder
 
 ## Blockchain service interface (backend/src/services/blockchain)
 
@@ -143,8 +183,9 @@ interface BlockchainService {
 
   deployLicensingContract(input: {
     studentAddress: string; universityAddress: string; companyAddress: string;
-    studentBps: number; universityBps: number;
-    royaltyWei: string; // student+university share ONLY - not the full license price
+    platformAddress: string;
+    studentBps: number; universityBps: number; platformBps: number; // sum to 10000
+    priceWei: string; // the FULL sale price
   }): Promise<{ address: string; deployTxHash: string }>;
 
   fundContract(input: { contractAddress: string; amountWei: string; fromRole: 'company' }):
@@ -152,7 +193,21 @@ interface BlockchainService {
 
   releaseContract(input: { contractAddress: string }): Promise<{
     txHash: string;
-    studentAmountWei: string; universityAmountWei: string;
+    studentAmountWei: string; universityAmountWei: string; platformAmountWei: string;
+  }>;
+
+  mintLicense(input: {
+    toAddress: string; sourceLicenseRequestId: number;
+    studentAddress: string; universityAddress: string; platformAddress: string;
+    studentBps: number; universityBps: number; platformBps: number;
+  }): Promise<{ tokenId: number; mintTxHash: string }>;
+
+  sublicense(input: {
+    tokenId: number; fromAddress: string; toAddress: string; priceWei: string;
+  }): Promise<{
+    txHash: string;
+    studentAmountWei: string; universityAmountWei: string; platformAmountWei: string;
+    sellerAmountWei: string;
   }>;
 }
 ```
@@ -165,20 +220,41 @@ interface BlockchainService {
   Contract: Owner / Project ID / Hash / Timestamp".
 - `contracts/contracts/LicensingRoyalty.sol` — one instance deployed per accepted license
   request (factory-less, deployed directly by the backend's signer for PoC simplicity).
-  Holds `studentAddress/universityAddress/companyAddress` and `studentBps/universityBps`
-  (`companyBps` = 10000 − the other two, stored on-chain as informational metadata only).
-  `fund()` is `payable`, callable once by the company, for exactly `royaltyWei` — the
-  student+university share of the agreed price (e.g. 15% for 10%/5% bps), **not** the full
-  license value. `release()` splits the held balance between student and university only,
-  proportional to their relative bps, and pays both out in one transaction. The company
-  never receives a payout from this contract, because its 85% share was never escrowed in
-  the first place — that money simply stays in the company's own wallet. This embodies both
-  the concept doc's "Licensing Contract" (lock payment, transfer license) and "Royalty
-  Contract" (10% Student / 5% University / 85% Company) without the bug of literally routing
-  85% of the license fee back to the party that paid it — an earlier version of this PoC
-  escrowed the full price and refunded 85% to the company on release, which is functionally
-  equivalent to the company only ever paying 15%, just obscured. `companyBps` remains useful
-  as an on-chain, auditable record of what the company is understood to retain.
+  Implements a **sale model**: holds `studentAddress/universityAddress/companyAddress/
+  platformAddress` and `studentBps/universityBps/platformBps` (must sum to exactly 10000).
+  `fund()` is `payable`, callable once by the company, for exactly `priceWei` — the FULL
+  agreed sale price, not a fraction of it. `release()` splits the entire held balance three
+  ways between student, university, and platform, proportional to their bps, and pays all
+  three out in one transaction. The company never receives a payout from this contract — it
+  is purely the payer. This is a deliberate flip from an earlier revenue-share design (10%
+  Student / 5% University / 85% Company, matching the concept doc's "Royalty Contract"
+  literally) where the company was treated as a majority stakeholder entitled to a payout of
+  its own share; that design either had to (a) refund 85% of the price back to the company on
+  release — pointless, since it's the company's own money — or (b) only ever escrow the 15%
+  minority share, which read confusingly against an advertised "price" that implied the full
+  amount would change hands. The current sale model avoids both: the advertised price *is*
+  the real amount paid, and the 85/5/10 split is simply how that real payment is divided.
+- `contracts/contracts/LicenseNFT.sol` — a single shared ERC-721 collection (OpenZeppelin
+  `ERC721`/`ERC2981`/`Ownable`). `mint()` is owner-only (the backend's operator wallet, since
+  it deployed the contract), called right after a `LicensingRoyalty` sale's `release()`
+  succeeds — holding the token IS holding the license from that point on. Each token stores
+  its own copy of a **resale royalty** `studentBps/universityBps/platformBps` split and the
+  three payee addresses; the backend computes this split as `RESALE_ROYALTY_BPS` (10% by
+  default) divided proportionally across the original sale's 85:5:10 ratio, not the original
+  sale's full bps — so a future resale doesn't re-escrow the entire resale price, leaving the
+  reselling company nothing. That smaller split is then enforced again on every resale, and
+  again after that, since it travels with the token.
+  `sublicense(tokenId, to)` is the enforced resale path: the current holder sends `msg.value`
+  as the new price, the contract splits and forwards the royalty portion to
+  student/university/platform and the remainder to the seller, and transfers the NFT to
+  `to` — all atomically in one transaction, so a resale cannot complete without the split
+  happening. `royaltyInfo` (ERC-2981) is also implemented for standards compliance with
+  external NFT marketplaces, but ERC-2981 is advisory only — it lets a marketplace *ask* what
+  royalty is owed, it does not force anyone to pay it. This contract deliberately has no
+  `receive()`/`fallback()`, so a marketplace that reads `royaltyInfo` and then sends a plain
+  ETH transfer straight to the contract (instead of calling `sublicense()`) gets a reverted
+  transaction, not silently stuck funds. `sublicense()` remains the only path in this PoC that
+  actually guarantees the payout happens.
 
 ## Frontend routes (React Router)
 

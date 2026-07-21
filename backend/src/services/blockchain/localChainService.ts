@@ -4,6 +4,7 @@ import path from 'path';
 import { env } from '../../config/env';
 import ownershipRegistryArtifact from './artifacts/OwnershipRegistry.json';
 import licensingRoyaltyArtifact from './artifacts/LicensingRoyalty.json';
+import licenseNftArtifact from './artifacts/LicenseNFT.json';
 import {
   BlockchainService,
   RegisterOwnershipInput,
@@ -14,6 +15,10 @@ import {
   FundContractResult,
   ReleaseContractInput,
   ReleaseContractResult,
+  MintLicenseInput,
+  MintLicenseResult,
+  SublicenseInput,
+  SublicenseResult,
 } from './types';
 
 /**
@@ -65,6 +70,25 @@ function resolveRegistryAddress(): string {
   return address;
 }
 
+function resolveLicenseNftAddress(): string {
+  if (env.LICENSE_NFT_ADDRESS) return env.LICENSE_NFT_ADDRESS;
+
+  const network = env.CHAIN_MODE === 'local' ? 'localhost' : env.CHAIN_MODE;
+  const deploymentPath = path.join(env.REPO_ROOT, 'contracts', 'deployments', `${network}.json`);
+  if (!fs.existsSync(deploymentPath)) {
+    throw new Error(
+      `LICENSE_NFT_ADDRESS is not set and no deployment file found at ${deploymentPath}. ` +
+        'Deploy the contracts first (see contracts/README) or set the env var explicitly.',
+    );
+  }
+  const deployment = JSON.parse(fs.readFileSync(deploymentPath, 'utf8'));
+  const address = deployment.licenseNft;
+  if (!address) {
+    throw new Error(`Deployment file ${deploymentPath} has no "licenseNft" field.`);
+  }
+  return address;
+}
+
 const MIN_ACTOR_BALANCE = ethers.parseEther('1');
 const TOP_UP_AMOUNT = ethers.parseEther('2');
 
@@ -72,11 +96,13 @@ export class LocalChainService implements BlockchainService {
   private provider: JsonRpcProvider;
   private operator: Wallet;
   private registryAddress: string;
+  private licenseNftAddress: string;
 
   constructor() {
     this.provider = new JsonRpcProvider(env.RPC_URL);
     this.operator = new Wallet(env.OPERATOR_PRIVATE_KEY, this.provider);
     this.registryAddress = resolveRegistryAddress();
+    this.licenseNftAddress = resolveLicenseNftAddress();
   }
 
   /** Ensures `address` can pay gas (and optionally `value`) by topping it up from the
@@ -163,9 +189,11 @@ export class LocalChainService implements BlockchainService {
       input.studentAddress,
       input.universityAddress,
       input.companyAddress,
+      input.platformAddress,
       input.studentBps,
       input.universityBps,
-      BigInt(input.royaltyWei),
+      input.platformBps,
+      BigInt(input.priceWei),
     );
     const receipt = await contract.deploymentTransaction()?.wait();
     if (!receipt) {
@@ -209,6 +237,7 @@ export class LocalChainService implements BlockchainService {
 
       let studentAmountWei = '0';
       let universityAmountWei = '0';
+      let platformAmountWei = '0';
       for (const log of receipt.logs as Log[]) {
         if (log.address.toLowerCase() !== input.contractAddress.toLowerCase()) continue;
         try {
@@ -216,6 +245,7 @@ export class LocalChainService implements BlockchainService {
           if (parsed && parsed.name === 'Released') {
             studentAmountWei = parsed.args.studentAmount.toString();
             universityAmountWei = parsed.args.universityAmount.toString();
+            platformAmountWei = parsed.args.platformAmount.toString();
             break;
           }
         } catch {
@@ -227,6 +257,78 @@ export class LocalChainService implements BlockchainService {
         txHash: receipt.hash,
         studentAmountWei,
         universityAmountWei,
+        platformAmountWei,
+      };
+    } finally {
+      await this.stopImpersonating(input.fromAddress);
+    }
+  }
+
+  /** LicenseNFT.mint() is owner-only, and the operator wallet deployed (and so owns) the
+   * contract - no impersonation needed here, unlike fund()/release() above. */
+  async mintLicense(input: MintLicenseInput): Promise<MintLicenseResult> {
+    const contract = new Contract(this.licenseNftAddress, licenseNftArtifact.abi, this.operator);
+    const tx = await contract.mint(
+      input.toAddress,
+      input.sourceLicenseRequestId,
+      input.studentAddress,
+      input.universityAddress,
+      input.platformAddress,
+      input.studentBps,
+      input.universityBps,
+      input.platformBps,
+    );
+    const receipt = await tx.wait();
+
+    let tokenId: number | undefined;
+    for (const log of receipt.logs as Log[]) {
+      if (log.address.toLowerCase() !== this.licenseNftAddress.toLowerCase()) continue;
+      try {
+        const parsed = contract.interface.parseLog(log);
+        if (parsed && parsed.name === 'LicenseMinted') {
+          tokenId = Number(parsed.args.tokenId);
+          break;
+        }
+      } catch {
+        // ignore non-matching logs
+      }
+    }
+    if (tokenId === undefined) {
+      throw new Error('LicenseMinted event not found in transaction receipt');
+    }
+
+    return { tokenId, mintTxHash: receipt.hash };
+  }
+
+  async sublicense(input: SublicenseInput): Promise<SublicenseResult> {
+    const value = BigInt(input.priceWei);
+    await this.ensureFunded(input.fromAddress, value);
+    const holderSigner = await this.impersonate(input.fromAddress);
+    try {
+      const contract = new Contract(this.licenseNftAddress, licenseNftArtifact.abi, holderSigner);
+      const tx = await contract.sublicense(input.tokenId, input.toAddress, { value });
+      const receipt = await tx.wait();
+
+      // The Sublicensed event only logs (tokenId, from, to, price), not the per-party payout
+      // amounts, so recompute the split the same way the contract does (the split itself is
+      // immutable per token, read directly off-chain here).
+      const split = await contract.royaltySplits(input.tokenId);
+      const studentAmountWei = ((value * BigInt(split.studentBps)) / 10000n).toString();
+      const universityAmountWei = ((value * BigInt(split.universityBps)) / 10000n).toString();
+      const platformAmountWei = ((value * BigInt(split.platformBps)) / 10000n).toString();
+      const sellerAmountWei = (
+        value -
+        BigInt(studentAmountWei) -
+        BigInt(universityAmountWei) -
+        BigInt(platformAmountWei)
+      ).toString();
+
+      return {
+        txHash: receipt.hash,
+        studentAmountWei,
+        universityAmountWei,
+        platformAmountWei,
+        sellerAmountWei,
       };
     } finally {
       await this.stopImpersonating(input.fromAddress);
